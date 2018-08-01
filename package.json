@@ -1,0 +1,33 @@
+{
+  "name": "offlineweb",
+  "version": "0.0.1",
+  "description": "Offline http and https cache",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caspia/offlineweb.git"
+  },
+  "author": "Kent James <kent@caspia.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/caspia/offlineweb/issues"
+  },
+  "homepage": "https://github.com/caspia/offlineweb#readme",
+  "devDependencies": {
+    "eslint": "^5.2.0",
+    "eslint-config-standard": "^11.0.0",
+    "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-node": "^7.0.1",
+    "eslint-plugin-promise": "^3.8.0",
+    "eslint-plugin-standard": "^3.1.0",
+    "jsdoc": "^3.5.5",
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "node-forge": "^0.7.5",
+    "pretty-format": "^23.2.0"
+  }
+}
