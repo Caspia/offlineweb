@@ -3,10 +3,11 @@
  * created and cached as needed based on a hostname and certificate
  * authority.
  *
- * @module certificates.js
+ * @module certificates
  */
 
 const forge = require('node-forge');
+const fs = require('fs-extra');
 // const prettyFormat = require('pretty-format');
 
 function promiseGenerateKeyPair(options) {
@@ -21,7 +22,20 @@ function promiseGenerateKeyPair(options) {
   });
 }
 
-// function to create and sign certificate. Adopted from tls example in node-forge repo.
+/**
+ * @typedef {Object} CertificateCompletePem
+ * @property {string} cert Server certificate in pem format
+ * @property {string} privateKey Server private key in pem format
+ *
+ */
+
+/**
+ * make a server certificate signed with a certificate authority
+ * @param {string} commonName The hostname, like example.caspia.org
+ * @param {string} caCrtPem Certificate for certificate authority, pem format
+ * @param {string} caKeyPem Private key for the certificate authority, pem format
+ * @returns {CertificateCompletePem} The created certificate including private key
+ */
 async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
   const keys = await promiseGenerateKeyPair({bits: 2048});
 
@@ -82,6 +96,32 @@ async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
   };
 }
 
+/**
+ * Ensure that a certificate is cached locally
+ *
+ * @param {string} certPem The server certificate to cache in PEM format
+ * @param {string} cacheDir Path to the root directory for cached certificates (must exist)
+ * @param {boolean} [force = false] Should we replace an existing entry in the cache?
+ * @returns {boolean} true if the certPem was written, false if existed and no write occurred.
+ */
+async function cacheCertificate(certPem, cacheDir, force = false) {
+  const cacheDirExists = await fs.pathExists(cacheDir);
+  if (!cacheDirExists) {
+    throw new Error('certificates.cacheCertificate: cacheDir must exist');
+  }
+  const certForge = forge.pki.certificateFromPem(certPem);
+  const hostname = certForge.subject.getField('CN').value;
+  const cachedCertPath = cacheDir + '/' + hostname;
+  const cachedCertExists = await fs.pathExists(cachedCertPath);
+  let didWrite = false;
+  if (!cachedCertExists || force) {
+    fs.writeFile(cachedCertPath, certPem);
+    didWrite = true;
+  }
+  return didWrite;
+}
+
 module.exports = {
-  makeServerCertificate
+  makeServerCertificate,
+  cacheCertificate
 };

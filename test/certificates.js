@@ -11,14 +11,22 @@ const forge = require('node-forge');
 // const prettyFormat = require('pretty-format');
 
 describe('certificates module', function() {
+  let cert, forgeCert, privateKey, forgeKey;
+  const cacheDir = 'test/results/cacheDir';
+
+  before(async function() {
+    await fs.remove(cacheDir);
+    await fs.ensureDir(cacheDir);
+  });
+
   describe('makeServerCertificate', function() {
     it('Creates and signs certificates', async function() {
       this.timeout(10000);
-      const {cert, privateKey} = await certificates.makeServerCertificate('example.caspia.org', caCertPem, caKeyPem);
-      const forgeKey = forge.pki.privateKeyFromPem(privateKey);
+      ({cert, privateKey} = await certificates.makeServerCertificate('example.caspia.org', caCertPem, caKeyPem));
+      forgeKey = forge.pki.privateKeyFromPem(privateKey);
       assert(forgeKey, 'pem key converted to object');
 
-      const forgeCert = forge.pki.certificateFromPem(cert);
+      forgeCert = forge.pki.certificateFromPem(cert);
       assert.strictEqual(forgeCert.subject.getField('CN').value, 'example.caspia.org', 'CN has expected value');
       assert.strictEqual(forgeCert.issuer.getField('CN').value, 'Kent James', 'issuer is from CA');
       await fs.ensureDir('test/results');
@@ -37,6 +45,23 @@ describe('certificates module', function() {
           }
         });
       });
+    });
+
+    it('caches certificates', async function() {
+      let didWrite = await certificates.cacheCertificate(cert, cacheDir);
+      assert(didWrite, 'write to empty directory didWrite');
+      didWrite = await certificates.cacheCertificate(cert, cacheDir);
+      assert(!didWrite, 'cache of existing certificate does not write');
+      didWrite = await certificates.cacheCertificate(cert, cacheDir, true);
+      assert(didWrite, 'forced write overwrites existing certificate');
+      const hostname = forgeCert.subject.getField('CN').value;
+      const cachedCertificateExists = await fs.pathExists(cacheDir + '/' + hostname);
+      assert(cachedCertificateExists, 'cache file of certificate exists');
+      const cachedCertPem = await fs.readFile(cacheDir + '/' + hostname);
+      assert(!!cachedCertPem.length, 'cached certificate pem has length');
+      const cachedCertForge = forge.pki.certificateFromPem(cachedCertPem);
+      assert.strictEqual(cachedCertForge.subject.getField('CN').value, hostname,
+        'cached certificate hostname matches');
     });
   });
 });
