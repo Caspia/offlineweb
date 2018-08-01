@@ -9,7 +9,7 @@
 const forge = require('node-forge');
 // const prettyFormat = require('pretty-format');
 
-function promiseGenerateKeyPair (options) {
+function promiseGenerateKeyPair(options) {
   return new Promise((resolve, reject) => {
     forge.pki.rsa.generateKeyPair(options, (err, keypair) => {
       if (err) {

@@ -11,9 +11,9 @@ const forge = require('node-forge');
 // const prettyFormat = require('pretty-format');
 const mkdirp = require('mkdirp');
 
-describe('certificates module', function () {
-  describe('makeServerCertificate', function () {
-    it('Creates and signs certificates', async function () {
+describe('certificates module', function() {
+  describe('makeServerCertificate', function() {
+    it('Creates and signs certificates', async function() {
       this.timeout(10000);
       const {cert, privateKey} = await certificates.makeServerCertificate('example.caspia.org', caCertPem, caKeyPem);
       const forgeKey = forge.pki.privateKeyFromPem(privateKey);
@@ -37,7 +37,7 @@ describe('certificates module', function () {
       await new Promise((resolve, reject) => {
         const caStore = forge.pki.createCaStore();
         caStore.addCertificate(forge.pki.certificateFromPem(caCertPem));
-        forge.pki.verifyCertificateChain(caStore, [forgeCert], function (vfd, depth, chain) {
+        forge.pki.verifyCertificateChain(caStore, [forgeCert], function(vfd, depth, chain) {
           if (vfd) {
             console.log('Certificate verified');
             resolve();
