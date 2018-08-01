@@ -8,7 +8,7 @@
 
 const forge = require('node-forge');
 const fs = require('fs-extra');
-// const prettyFormat = require('pretty-format');
+const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 
 function promiseGenerateKeyPair(options) {
   return new Promise((resolve, reject) => {
@@ -121,7 +121,28 @@ async function cacheCertificate(certPem, cacheDir, force = false) {
   return didWrite;
 }
 
+/**
+ * Get a server certificate from cache, or create and cache if needed
+ * @param {string} hostname The server hostname, like example.caspia.org
+ * @param {string} cacheDir Path to the root directory for cached certificates (must exist)
+ * @param {string} caCrtPem Certificate for certificate authority, pem format
+ * @param {string} caKeyPem Private key for the certificate authority, pem format
+ * @returns {string} The server certificate in pem format
+ */
+async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
+  const cachedCertPath = cacheDir + '/' + hostname;
+  let cert; // the server certificate to return in pem format
+  if (await fs.pathExists(cachedCertPath)) {
+    cert = await fs.readFile(cachedCertPath, 'ascii');
+  } else {
+    ({cert} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
+    await cacheCertificate(cert, cacheDir);
+  }
+  return cert;
+}
+
 module.exports = {
   makeServerCertificate,
-  cacheCertificate
+  cacheCertificate,
+  getOrCreateServerCertificate
 };
