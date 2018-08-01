@@ -22,7 +22,7 @@ function promiseGenerateKeyPair(options) {
 }
 
 // function to create and sign certificate. Adopted from tls example in node-forge repo.
-async function makeServerCertificate (commonName, caCrtPem, caKeyPem) {
+async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
   const keys = await promiseGenerateKeyPair({bits: 2048});
 
   const cert = forge.pki.createCertificate();

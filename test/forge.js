@@ -3,7 +3,7 @@
  */
 const forge = require('node-forge');
 const assert = require('assert');
-const fs = require('fs');
+const fs = require('fs-extra');
 // const prettyFormat = require('pretty-format');
 
 /*
@@ -19,12 +19,12 @@ const fs = require('fs');
 
 const caCertificatePem = fs.readFileSync('test/ca.crt');
 
-describe('node-forge module demo and test', function () {
-  it('Has a method pki', function () {
+describe('node-forge module demo and test', function() {
+  it('Has a method pki', function() {
     assert(forge.pki, 'method pki exists');
   });
 
-  it('Converts PEM certificate to forge certificate', function () {
+  it('Converts PEM certificate to forge certificate', function() {
     const caCertificate = forge.pki.certificateFromPem(caCertificatePem);
     assert.strictEqual(caCertificate.subject.getField('O').value,
       'Caspia',

@@ -27,6 +27,7 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
+    "fs-extra": "^7.0.0",
     "node-forge": "^0.7.5",
     "pretty-format": "^23.2.0"
   }

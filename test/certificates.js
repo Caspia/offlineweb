@@ -3,13 +3,12 @@
  */
 
 const assert = require('assert');
-const fs = require('fs');
+const fs = require('fs-extra');
 const certificates = require('../certificates');
 const caKeyPem = fs.readFileSync('test/ca.key');
 const caCertPem = fs.readFileSync('test/ca.crt');
 const forge = require('node-forge');
 // const prettyFormat = require('pretty-format');
-const mkdirp = require('mkdirp');
 
 describe('certificates module', function() {
   describe('makeServerCertificate', function() {
@@ -22,15 +21,7 @@ describe('certificates module', function() {
       const forgeCert = forge.pki.certificateFromPem(cert);
       assert.strictEqual(forgeCert.subject.getField('CN').value, 'example.caspia.org', 'CN has expected value');
       assert.strictEqual(forgeCert.issuer.getField('CN').value, 'Kent James', 'issuer is from CA');
-      await new Promise((resolve, reject) => {
-        mkdirp('test/results', (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
+      await fs.ensureDir('test/results');
       fs.writeFileSync('test/results/example.caspia.org.pem', cert);
       fs.writeFileSync('test/results/example.caspia.org.key', privateKey);
 
