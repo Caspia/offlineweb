@@ -4,12 +4,18 @@
  * @module responsecache
  */
 
-// const sanitizeFilename = require('sanitize-filename');
 const url = require('url');
 const fs = require('fs-extra');
 const fetch = require('node-fetch');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 
+/**
+ * Does content for a url exist in the cache?
+ *
+ * @param {string} siteUrl the url of the desired content
+ * @param {string} responseCachePath path to root directory of content cache
+ * @returns {boolean} true if content is cached
+ */
 async function isCached(siteUrl, responseCachePath) {
   const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
   const urlFilePath = responseCachePath + '/' + encodedHostname + '/' + encodedFilename;
@@ -22,6 +28,12 @@ async function isCached(siteUrl, responseCachePath) {
   return isCached;
 }
 
+/**
+ * Fetch and cache remote content for a url
+ *
+ * @param {string} siteUrl the url of the desired content
+ * @param {string} responseCachePath path to root directory of content cache
+ */
 async function saveToResponseCache(siteUrl, responseCachePath) {
   const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
   await fs.ensureDir(responseCachePath + '/' + encodedHostname);
@@ -48,6 +60,13 @@ async function saveToResponseCache(siteUrl, responseCachePath) {
   });
 };
 
+/**
+ * Stream contents of the response cache to an http response
+ *
+ * @param {string} siteUrl the url of the desired content
+ * @param {string} responseCachePath path to root directory of content cache
+ * @param {http.ServerResponse} response the response from a node http server (request, response)
+ */
 async function streamFromResponseCache(siteUrl, responseCachePath, response) {
   try {
     const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
@@ -79,12 +98,23 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
   }
 }
 
-function encodeUrl(siteUrl) {
-  // Generate the filename for the cached response. We recognize a url for
-  // cache writing and reading by the sanitized hostname and path. Hostnames
-  // are represented by directories, containing files starting with sanitized
-  // paths beginning with '/' so we can represent the empty path.
+/**
+ * @typedef {Object} EncodedUrlNames host and file names for cached content
+ * @property {string} encodeHostaname sanitized host name (used as a directory name)
+ * @property {string} encodedFilenamesanitized sanitized filename
+ */
 
+/**
+ * Generate the filename for the cached response.
+ *
+ * We recognize a url for cache writing and reading by the sanitized hostname
+ * and path. Hostnames are represented by directories, containing files starting with sanitized
+ * paths beginning with '/' so we can represent the empty path.
+ *
+ * @param {string} siteUrl the url of the desired content
+ * @returns {EncodedUrlNames} host and file names
+ */
+function encodeUrl(siteUrl) {
   const siteUrlObject = url.parse(siteUrl);
   const encodedHostname = encodeURIComponent(siteUrlObject.host);
   const encodedFilename = encodeURIComponent(siteUrlObject.path);

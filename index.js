@@ -1,5 +1,5 @@
 /**
- * Setup servers that read from reasponse cache
+ * Setup servers that read from response cache
  * @file
  */
 
@@ -11,8 +11,6 @@ const fs = require('fs-extra');
 const URL = require('url').URL;
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 
-const dummyKey = fs.readFileSync('test/results/cacheDir/example.caspia.org.key');
-const dummyCert = fs.readFileSync('test/results/cacheDir/example.caspia.org');
 const caCrt = fs.readFileSync('test/ca.crt');
 const caKey = fs.readFileSync('test/ca.key');
 
@@ -51,7 +49,7 @@ function getContent(responseCachePath, request, response) {
   // bypass dont cache sites
   let dontCache = false;
   for (let site of dontCacheSites) {
-    if(siteUrl.startsWith(site)) {
+    if (siteUrl.startsWith(site)) {
       dontCache = true;
       break;
     }
@@ -105,10 +103,8 @@ async function cacheAndRespond(siteUrl, responseCachePath, response) {
   await responsecache.streamFromResponseCache(siteUrl, responseCachePath, response);
 }
 
-const options = {
+const tlsOptions = {
   rejectUnauthorized: true,
-  key: dummyKey,
-  cert: dummyCert,
   SNICallback: (servername, cb) => {
     console.log('SNICallback servername ' + servername);
     certificates.getOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
@@ -118,7 +114,7 @@ const options = {
   }
 };
 
-const httpsServer = https.createServer(options);
+const httpsServer = https.createServer(tlsOptions);
 httpsServer.on('request', (request, response) => {
   getContent(responseCachePath, request, response);
 });

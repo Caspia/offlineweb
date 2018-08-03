@@ -21,7 +21,7 @@ describe('certificates module', function() {
 
   describe('makeServerCertificate', function() {
     it('Creates and signs certificates', async function() {
-      this.timeout(10000);
+      this.timeout(30000);
       ({cert, privateKey} = await certificates.makeServerCertificate('example.caspia.org', caCertPem, caKeyPem));
       forgeKey = forge.pki.privateKeyFromPem(privateKey);
       assert(forgeKey, 'pem key converted to object');
@@ -74,7 +74,7 @@ describe('certificates module', function() {
     });
 
     it('gets or creates server certificates', async function() {
-      this.timeout(10000);
+      this.timeout(30000);
       const certKey1 = await certificates.getOrCreateServerCertificate('example.caspia.org', cacheDir, caCertPem, caKeyPem);
       const cert1 = certKey1.cert;
       // const key1 = certKey1.privateKey;
