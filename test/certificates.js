@@ -49,18 +49,21 @@ describe('certificates module', function() {
 
     it('caches certificates', async function() {
       this.timeout(10000);
-      let didWrite = await certificates.cacheCertificate(cert, cacheDir);
+      let didWrite = await certificates.cacheCertificate(cert, privateKey, cacheDir);
       assert(didWrite, 'write to empty directory didWrite');
 
-      didWrite = await certificates.cacheCertificate(cert, cacheDir);
+      didWrite = await certificates.cacheCertificate(cert, privateKey, cacheDir);
       assert(!didWrite, 'cache of existing certificate does not write');
 
-      didWrite = await certificates.cacheCertificate(cert, cacheDir, true);
+      didWrite = await certificates.cacheCertificate(cert, privateKey, cacheDir, true);
       assert(didWrite, 'forced write overwrites existing certificate');
 
       const hostname = forgeCert.subject.getField('CN').value;
       const cachedCertificateExists = await fs.pathExists(cacheDir + '/' + hostname);
       assert(cachedCertificateExists, 'cache file of certificate exists');
+
+      const cachedKeyExists = await fs.pathExists(cacheDir + '/' + hostname + '.key');
+      assert(cachedKeyExists, 'cache file of privateKey exists');
 
       const cachedCertPem = await fs.readFile(cacheDir + '/' + hostname, 'ascii');
       assert(!!cachedCertPem.length, 'cached certificate pem has length');
@@ -72,14 +75,17 @@ describe('certificates module', function() {
 
     it('gets or creates server certificates', async function() {
       this.timeout(10000);
-      const cert1 = await certificates.getOrCreateServerCertificate('example.caspia.org', cacheDir, caCertPem, caKeyPem);
+      const certKey1 = await certificates.getOrCreateServerCertificate('example.caspia.org', cacheDir, caCertPem, caKeyPem);
+      const cert1 = certKey1.cert;
+      // const key1 = certKey1.privateKey;
       const cert1Forge = forge.pki.certificateFromPem(cert1);
       assert.strictEqual('example.caspia.org', cert1Forge.subject.getField('CN').value, 'gets cached cert');
 
       let cert2CacheExists = await fs.pathExists(cacheDir + '/' + 'example.caspia.com');
       assert(!cert2CacheExists, 'example.caspia.com is not already cached');
 
-      const cert2 = await certificates.getOrCreateServerCertificate('example.caspia.com', cacheDir, caCertPem, caKeyPem);
+      const certKey2 = await certificates.getOrCreateServerCertificate('example.caspia.com', cacheDir, caCertPem, caKeyPem);
+      const cert2 = certKey2.cert;
       const cert2Forge = forge.pki.certificateFromPem(cert2);
       assert.strictEqual('example.caspia.com', cert2Forge.subject.getField('CN').value, 'creates new cert');
 

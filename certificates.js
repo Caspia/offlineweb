@@ -40,7 +40,8 @@ async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
   const keys = await promiseGenerateKeyPair({bits: 2048});
 
   const cert = forge.pki.createCertificate();
-  cert.serialNumber = '01';
+  // a large number
+  cert.serialNumber = Math.floor(Math.random() * 100000000000000000).toString(10);
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(
@@ -100,11 +101,12 @@ async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
  * Ensure that a certificate is cached locally
  *
  * @param {string} certPem The server certificate to cache in PEM format
+ * @param {string} keyPem The server private key to cache in PEM format
  * @param {string} cacheDir Path to the root directory for cached certificates (must exist)
  * @param {boolean} [force = false] Should we replace an existing entry in the cache?
  * @returns {boolean} true if the certPem was written, false if existed and no write occurred.
  */
-async function cacheCertificate(certPem, cacheDir, force = false) {
+async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
   const cacheDirExists = await fs.pathExists(cacheDir);
   if (!cacheDirExists) {
     throw new Error('certificates.cacheCertificate: cacheDir must exist');
@@ -112,10 +114,12 @@ async function cacheCertificate(certPem, cacheDir, force = false) {
   const certForge = forge.pki.certificateFromPem(certPem);
   const hostname = certForge.subject.getField('CN').value;
   const cachedCertPath = cacheDir + '/' + hostname;
+  const cachedKeyPath = cachedCertPath + '.key';
   const cachedCertExists = await fs.pathExists(cachedCertPath);
   let didWrite = false;
   if (!cachedCertExists || force) {
-    fs.writeFile(cachedCertPath, certPem);
+    await fs.writeFile(cachedCertPath, certPem);
+    await fs.writeFile(cachedKeyPath, keyPem);
     didWrite = true;
   }
   return didWrite;
@@ -127,18 +131,21 @@ async function cacheCertificate(certPem, cacheDir, force = false) {
  * @param {string} cacheDir Path to the root directory for cached certificates (must exist)
  * @param {string} caCrtPem Certificate for certificate authority, pem format
  * @param {string} caKeyPem Private key for the certificate authority, pem format
- * @returns {string} The server certificate in pem format
+ * @returns {CertificateCompletePem} The server key, certificate in pem format
  */
 async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
   const cachedCertPath = cacheDir + '/' + hostname;
+  const cachedKeyPath = cachedCertPath + '.key';
   let cert; // the server certificate to return in pem format
+  let privateKey; // the server key in pem format
   if (await fs.pathExists(cachedCertPath)) {
     cert = await fs.readFile(cachedCertPath, 'ascii');
+    privateKey = await fs.readFile(cachedKeyPath, 'ascii');
   } else {
-    ({cert} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
-    await cacheCertificate(cert, cacheDir);
+    ({cert, privateKey} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
+    await cacheCertificate(cert, privateKey, cacheDir);
   }
-  return cert;
+  return {cert, privateKey};
 }
 
 module.exports = {

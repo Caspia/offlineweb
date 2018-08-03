@@ -35,6 +35,15 @@ describe('responsecache module', function() {
     });
   });
 
+  describe('isCached', function() {
+    it('detects cached', async function() {
+      assert(await responsecache.isCached(testUrl, responseDir));
+    });
+    it('detects uncached', async function() {
+      assert(!(await responsecache.isCached('http://invalid.com', responseDir)));
+    });
+  });
+
   describe('streamFromResponseCache', function() {
     it('streams a correct length string', async function() {
       const writeStream = new MemoryStream(null, {readable: false});
