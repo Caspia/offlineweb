@@ -30,8 +30,6 @@ describe('certificates module', function() {
       assert.strictEqual(forgeCert.subject.getField('CN').value, 'example.caspia.org', 'CN has expected value');
       assert.strictEqual(forgeCert.issuer.getField('CN').value, 'Kent James', 'issuer is from CA');
       await fs.ensureDir('test/results');
-      fs.writeFileSync('test/results/example.caspia.org.pem', cert);
-      fs.writeFileSync('test/results/example.caspia.org.key', privateKey);
 
       await new Promise((resolve, reject) => {
         const caStore = forge.pki.createCaStore();
