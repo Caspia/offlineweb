@@ -20,6 +20,17 @@ describe('certificates module', function() {
   });
 
   describe('makeServerCertificate', function() {
+    it('Throws on error', async function() {
+      try {
+        this.timeout(30000);
+        ({cert, privateKey} = await certificates.makeServerCertificate('', 'garbage', ''));
+        assert(false, 'Expect throw');
+      } catch (error) {
+        // console.log('Expected error: ' + error.stack);
+        assert(true, 'throws as expected');
+      }
+    });
+
     it('Creates and signs certificates', async function() {
       this.timeout(30000);
       ({cert, privateKey} = await certificates.makeServerCertificate('example.caspia.org', caCertPem, caKeyPem));
@@ -43,6 +54,18 @@ describe('certificates module', function() {
           }
         });
       });
+    });
+  });
+
+  describe('cacheCertificate', function() {
+    it('throws on error', async function() {
+      try {
+        await certificates.cacheCertificate('', '', '');
+        assert(false, 'should not be reached');
+      } catch (error) {
+        // console.log('Expected error: ' + error.stack);
+        assert(true, 'Expected throw');
+      }
     });
 
     it('caches certificates', async function() {
@@ -69,6 +92,18 @@ describe('certificates module', function() {
       const cachedCertForge = forge.pki.certificateFromPem(cachedCertPem);
       assert.strictEqual(cachedCertForge.subject.getField('CN').value, hostname,
         'cached certificate hostname matches');
+    });
+  });
+
+  describe('getOrCreateServerCertificate', function() {
+    it('throws on error', async function() {
+      try {
+        await certificates.getOrCreateServerCertificate('', '', '');
+        assert(false, 'Should not be reached');
+      } catch (error) {
+        // console.log('Expected error: ' + error.stack);
+        assert(true, 'Expected throw');
+      }
     });
 
     it('gets or creates server certificates', async function() {

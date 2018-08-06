@@ -8,6 +8,7 @@ const url = require('url');
 const fs = require('fs-extra');
 const fetch = require('node-fetch');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
+const TraceError = require('./utils').TraceError;
 
 /**
  * Does content for a url exist in the cache?
@@ -17,15 +18,19 @@ const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-
  * @returns {boolean} true if content is cached
  */
 async function isCached(siteUrl, responseCachePath) {
-  const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
-  const urlFilePath = responseCachePath + '/' + encodedHostname + '/' + encodedFilename;
-  let isCached = true;
   try {
-    await fs.stat(urlFilePath);
-  } catch (err) {
-    isCached = false;
+    const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
+    const urlFilePath = responseCachePath + '/' + encodedHostname + '/' + encodedFilename;
+    let isCached = true;
+    try {
+      await fs.stat(urlFilePath);
+    } catch (err) {
+      isCached = false;
+    }
+    return isCached;
+  } catch (error) {
+    throw new TraceError('Unexpected error in isCached', error);
   }
-  return isCached;
 }
 
 /**
@@ -35,29 +40,36 @@ async function isCached(siteUrl, responseCachePath) {
  * @param {string} responseCachePath path to root directory of content cache
  */
 async function saveToResponseCache(siteUrl, responseCachePath) {
-  const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
-  await fs.ensureDir(responseCachePath + '/' + encodedHostname);
-  const response = await fetch(siteUrl);
-  await new Promise((resolve, reject) => {
-    let headersObject = {};
-    for (let pair of response.headers.entries()) {
-      headersObject[pair[0]] = pair[1];
+  try {
+    const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
+    await fs.ensureDir(responseCachePath + '/' + encodedHostname);
+    let response;
+    try {
+      response = await fetch(siteUrl);
+    } catch (err) {
+      throw new TraceError('error fetching ' + siteUrl, err);
     }
-    const dest = fs.createWriteStream(responseCachePath + '/' + encodedHostname + '/' + encodedFilename);
-    response.body.pipe(dest);
-    response.body.on('error', err => {
-      reject(err);
+    await new Promise((resolve, reject) => {
+      let headersObject = {};
+      for (let pair of response.headers.entries()) {
+        headersObject[pair[0]] = pair[1];
+      }
+      const dest = fs.createWriteStream(responseCachePath + '/' + encodedHostname + '/' + encodedFilename);
+      response.body.pipe(dest);
+      response.body.on('error', err => {
+        reject(new TraceError('error piping from response.body', err));
+      });
+      dest.on('finish', () => {
+        // write the headers file
+        fs.writeFile(responseCachePath + '/' + encodedHostname + '/' + encodedFilename + '.headers', JSON.stringify(headersObject))
+          .then(() => resolve())
+          .catch(err => reject(new TraceError('error writing headers', err)));
+      });
+      dest.on('error', err => reject(new TraceError('error piping to file', err)));
     });
-    dest.on('finish', () => {
-      // write the headers file
-      fs.writeFile(responseCachePath + '/' + encodedHostname + '/' + encodedFilename + '.headers', JSON.stringify(headersObject))
-        .then(() => resolve())
-        .catch(err => reject(err));
-    });
-    dest.on('error', err => {
-      reject(err);
-    });
-  });
+  } catch (error) {
+    throw new TraceError('Unexpected error in saveToResponseCache', error);
+  }
 };
 
 /**
@@ -83,25 +95,24 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
       readStream.pipe(response);
       response.on('error', err => {
         console.log('response error: ' + err);
-        reject(err);
+        reject(new TraceError('error piping to response', err));
       });
       readStream.on('end', () => {
         resolve();
       });
       readStream.on('error', err => {
-        console.log('readStream error' + err);
-        reject(err);
+        reject(new TraceError('error piping from cache file', err));
       });
     });
   } catch (err) {
-    console.log('siteUrl: ' + siteUrl + ' Error: ' + err); throw err;
+    throw new TraceError('Unexpected error processing ' + siteUrl, err);
   }
 }
 
 /**
  * @typedef {Object} EncodedUrlNames host and file names for cached content
- * @property {string} encodeHostaname sanitized host name (used as a directory name)
- * @property {string} encodedFilenamesanitized sanitized filename
+ * @property {string} encodedHostaame sanitized host name (used as a directory name)
+ * @property {string} encodedFilename sanitized filename
  */
 
 /**

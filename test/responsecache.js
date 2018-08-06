@@ -31,6 +31,16 @@ describe('responsecache module', function() {
   });
 
   describe('saveToResponseCache', function() {
+    it('throws an error', async function() {
+      try {
+        await responsecache.saveToResponseCache('http://doesnotexist.example.org', responseDir);
+        assert(false, 'should not be reached');
+      } catch (err) {
+        // console.log('Expected error: ' + err.stack);
+        assert(true, 'expected error');
+      }
+    });
+
     it('gets a body', async function() {
       await responsecache.saveToResponseCache(testUrl, responseDir);
     });
@@ -46,6 +56,16 @@ describe('responsecache module', function() {
   });
 
   describe('streamFromResponseCache', function() {
+    it('throws an error', async function() {
+      try {
+        await responsecache.streamFromResponseCache(testUrl, responseDir, {});
+        assert(false, 'should not be reached');
+      } catch (err) {
+        // console.log('expected error: ' + err.stack);
+        assert(true, 'Expected error');
+      }
+    });
+
     it('streams a correct length string', async function() {
       const writeStream = new MemoryStream(null, {readable: false});
       await responsecache.streamFromResponseCache(testUrl, responseDir, writeStream);

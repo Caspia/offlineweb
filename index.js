@@ -10,6 +10,7 @@ const fetch = require('node-fetch');
 const fs = require('fs-extra');
 const URL = require('url').URL;
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
+const TraceError = require('./utils').TraceError;
 
 const caCrt = fs.readFileSync('test/ca.crt');
 const caKey = fs.readFileSync('test/ca.key');
@@ -82,7 +83,7 @@ function getContent(responseCachePath, request, response) {
       }).catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        console.log(err.toString());
+        console.log('Error from cacheAndResponse' + err.stack);
         response.end();
       });
   }
@@ -96,21 +97,40 @@ function getContent(responseCachePath, request, response) {
  * @param {http.ServerResponse} response the response from a node http server (request, response)
  */
 async function cacheAndRespond(siteUrl, responseCachePath, response) {
-  const isCached = await responsecache.isCached(siteUrl, responseCachePath);
-  if (!isCached) {
-    await responsecache.saveToResponseCache(siteUrl, responseCachePath);
+  let isCached = false;
+  try {
+    isCached = await responsecache.isCached(siteUrl, responseCachePath);
+  } catch (err) {
+    throw new TraceError('error getting isCached', err);
   }
-  await responsecache.streamFromResponseCache(siteUrl, responseCachePath, response);
+  if (!isCached) {
+    try {
+      await responsecache.saveToResponseCache(siteUrl, responseCachePath);
+    } catch (err) {
+      throw new TraceError('error saving to response cache', err);
+    }
+  }
+  try {
+    await responsecache.streamFromResponseCache(siteUrl, responseCachePath, response);
+  } catch (err) {
+    throw new TraceError('errors in streamFromResponseCache', err);
+  }
 }
 
 const tlsOptions = {
   rejectUnauthorized: true,
   SNICallback: (servername, cb) => {
     console.log('SNICallback servername ' + servername);
-    certificates.getOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
-      .then(serverCertKey => {
-        cb(null, tls.createSecureContext({key: serverCertKey.privateKey, cert: serverCertKey.cert, ca: caCrt}));
-      });
+    try {
+      certificates.getOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
+        .then(serverCertKey => {
+          cb(null, tls.createSecureContext({key: serverCertKey.privateKey, cert: serverCertKey.cert, ca: caCrt}));
+        });
+    } catch (err) {
+      const error = new TraceError('error in getOrCreateServerCertificate', err);
+      // in a callback, no way to propagate error upwards
+      console.log(error.stack);
+    }
   }
 };
 

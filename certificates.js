@@ -9,12 +9,13 @@
 const forge = require('node-forge');
 const fs = require('fs-extra');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
+const TraceError = require('./utils').TraceError;
 
 function promiseGenerateKeyPair(options) {
   return new Promise((resolve, reject) => {
     forge.pki.rsa.generateKeyPair(options, (err, keypair) => {
       if (err) {
-        reject(err);
+        reject(new TraceError('Failure generating key pair', err));
       } else {
         resolve(keypair);
       }
@@ -37,64 +38,68 @@ function promiseGenerateKeyPair(options) {
  * @returns {CertificateCompletePem} The created certificate including private key
  */
 async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
-  const keys = await promiseGenerateKeyPair({bits: 2048});
+  try {
+    const keys = await promiseGenerateKeyPair({bits: 2048});
 
-  const cert = forge.pki.createCertificate();
-  // a large number
-  cert.serialNumber = Math.floor(Math.random() * 100000000000000000).toString(10);
-  cert.validity.notBefore = new Date();
-  cert.validity.notAfter = new Date();
-  cert.validity.notAfter.setFullYear(
-    cert.validity.notBefore.getFullYear() + 10);
-  var attrs = [
-    {
-      name: 'commonName',
-      value: commonName
-    },
-    {
-      name: 'countryName',
-      value: 'US'
-    },
-    {
-      shortName: 'ST',
-      value: 'Washington'
-    },
-    {
-      name: 'localityName',
-      value: 'Redmond'
-    },
-    {
-      name: 'organizationName',
-      value: 'Caspia'
-    },
-    {
-      shortName: 'OU',
-      value: 'offlineweb'
-    }
-  ];
-  cert.setSubject(attrs);
-  const caCrt = forge.pki.certificateFromPem(caCrtPem);
-  cert.setIssuer(caCrt.subject.attributes);
-  cert.setExtensions([
-    { name: 'basicConstraints',
-      cA: false
-    },
-    {
-      name: 'keyUsage',
-      digitalSignature: true,
-      nonRepudiation: true,
-      keyEncipherment: true,
-      dataEncipherment: true
-    }
-  ]);
-  cert.publicKey = keys.publicKey;
+    const cert = forge.pki.createCertificate();
+    // a large number
+    cert.serialNumber = Math.floor(Math.random() * 100000000000000000).toString(10);
+    cert.validity.notBefore = new Date();
+    cert.validity.notAfter = new Date();
+    cert.validity.notAfter.setFullYear(
+      cert.validity.notBefore.getFullYear() + 10);
+    var attrs = [
+      {
+        name: 'commonName',
+        value: commonName
+      },
+      {
+        name: 'countryName',
+        value: 'US'
+      },
+      {
+        shortName: 'ST',
+        value: 'Washington'
+      },
+      {
+        name: 'localityName',
+        value: 'Redmond'
+      },
+      {
+        name: 'organizationName',
+        value: 'Caspia'
+      },
+      {
+        shortName: 'OU',
+        value: 'offlineweb'
+      }
+    ];
+    cert.setSubject(attrs);
+    const caCrt = forge.pki.certificateFromPem(caCrtPem);
+    cert.setIssuer(caCrt.subject.attributes);
+    cert.setExtensions([
+      { name: 'basicConstraints',
+        cA: false
+      },
+      {
+        name: 'keyUsage',
+        digitalSignature: true,
+        nonRepudiation: true,
+        keyEncipherment: true,
+        dataEncipherment: true
+      }
+    ]);
+    cert.publicKey = keys.publicKey;
 
-  // sign certificate using the certificate authority
-  cert.sign(forge.pki.privateKeyFromPem(caKeyPem), forge.md.sha256.create());
-  return {
-    cert: forge.pki.certificateToPem(cert),
-    privateKey: forge.pki.privateKeyToPem(keys.privateKey)
-  };
+    // sign certificate using the certificate authority
+    cert.sign(forge.pki.privateKeyFromPem(caKeyPem), forge.md.sha256.create());
+    return {
+      cert: forge.pki.certificateToPem(cert),
+      privateKey: forge.pki.privateKeyToPem(keys.privateKey)
+    };
+  } catch (error) {
+    throw new TraceError('Unexpected error in makeServerCertificate', error);
+  }
 }
 
 /**
@@ -107,22 +112,26 @@ async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
  * @returns {boolean} true if the certPem was written, false if existed and no write occurred.
  */
 async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
-  const cacheDirExists = await fs.pathExists(cacheDir);
-  if (!cacheDirExists) {
-    throw new Error('certificates.cacheCertificate: cacheDir must exist');
+  try {
+    const cacheDirExists = await fs.pathExists(cacheDir);
+    if (!cacheDirExists) {
+      throw new Error('certificates.cacheCertificate: cacheDir must exist');
+    }
+    const certForge = forge.pki.certificateFromPem(certPem);
+    const hostname = certForge.subject.getField('CN').value;
+    const cachedCertPath = cacheDir + '/' + hostname;
+    const cachedKeyPath = cachedCertPath + '.key';
+    const cachedCertExists = await fs.pathExists(cachedCertPath);
+    let didWrite = false;
+    if (!cachedCertExists || force) {
+      await fs.writeFile(cachedCertPath, certPem);
+      await fs.writeFile(cachedKeyPath, keyPem);
+      didWrite = true;
+    }
+    return didWrite;
+  } catch (error) {
+    throw new TraceError('Unexpected error in cacheCertificate', error);
   }
-  const certForge = forge.pki.certificateFromPem(certPem);
-  const hostname = certForge.subject.getField('CN').value;
-  const cachedCertPath = cacheDir + '/' + hostname;
-  const cachedKeyPath = cachedCertPath + '.key';
-  const cachedCertExists = await fs.pathExists(cachedCertPath);
-  let didWrite = false;
-  if (!cachedCertExists || force) {
-    await fs.writeFile(cachedCertPath, certPem);
-    await fs.writeFile(cachedKeyPath, keyPem);
-    didWrite = true;
-  }
-  return didWrite;
 }
 
 /**
@@ -134,18 +143,22 @@ async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
  * @returns {CertificateCompletePem} The server key, certificate in pem format
  */
 async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
-  const cachedCertPath = cacheDir + '/' + hostname;
-  const cachedKeyPath = cachedCertPath + '.key';
-  let cert; // the server certificate to return in pem format
-  let privateKey; // the server key in pem format
-  if (await fs.pathExists(cachedCertPath)) {
-    cert = await fs.readFile(cachedCertPath, 'ascii');
-    privateKey = await fs.readFile(cachedKeyPath, 'ascii');
-  } else {
-    ({cert, privateKey} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
-    await cacheCertificate(cert, privateKey, cacheDir);
+  try {
+    const cachedCertPath = cacheDir + '/' + hostname;
+    const cachedKeyPath = cachedCertPath + '.key';
+    let cert; // the server certificate to return in pem format
+    let privateKey; // the server key in pem format
+    if (await fs.pathExists(cachedCertPath)) {
+      cert = await fs.readFile(cachedCertPath, 'ascii');
+      privateKey = await fs.readFile(cachedKeyPath, 'ascii');
+    } else {
+      ({cert, privateKey} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
+      await cacheCertificate(cert, privateKey, cacheDir);
+    }
+    return {cert, privateKey};
+  } catch (error) {
+    throw new TraceError('Unexpected error in getOrCreateServerCertificate', error.stack);
   }
-  return {cert, privateKey};
 }
 
 module.exports = {
