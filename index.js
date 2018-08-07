@@ -11,21 +11,33 @@ const fs = require('fs-extra');
 const URL = require('url').URL;
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
+const logging = require('./logging');
 
-const caCrt = fs.readFileSync('test/ca.crt');
-const caKey = fs.readFileSync('test/ca.key');
+// path to certificate authority certificate
+const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
 
+// path to certificate authority private key
+const caKeyPath = process.env.OFFLINEWEB_CAKEYPATH || 'test/ca.key';
+
+// path to log files
+const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb';
+
+const caCrt = fs.readFileSync(caCrtPath);
+const caKey = fs.readFileSync(caKeyPath);
 const dontCacheSites = [
-  'http://google.com'
+  'google.com'
 ];
+
+const {errorLog, accessLog} = logging.setupLogging(logFilesPath);
+errorLog.info('Restarting offlineweb');
 
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
 
-const responseCachePath = 'test/results/responseDir';
-const certificateCachePath = 'test/results/cacheDir';
-const port = 3129;
-const tlsport = 3130;
+const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || 'test/results/responseDir';
+const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || 'test/results/cacheDir';
+const port = process.env.OFFLINEWEB_PORT || 3129;
+const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
 
 /**
  * Respond to an incoming request with content. The content may come from the cache,
@@ -35,15 +47,15 @@ const tlsport = 3130;
  * @param {http.ServerResponse} response the response from a node http server (request, response)
  */
 function getContent(responseCachePath, request, response) {
-  console.log('host: ' + request.headers.host);
-  console.log('url: ' + request.url);
+  accessLog.info(`host: ${request.headers.host} url: ${request.url} method: ${request.method}`);
   const siteUrl = (new URL(request.url, 'http://' + request.headers.host)).toString();
-  console.log('siteUrl: ' + siteUrl);
+  errorLog.info(`siteUrl: ${siteUrl}`);
 
   // We only support GET
   if (request.method !== 'GET') {
     response.statusCode = 405;
-    response.statusMessage = 'offlineweb proxu only supports GET';
+    response.statusMessage = 'offlineweb proxy only supports GET';
+    errorLog.warn(`non-GET request for siteUrl ${siteUrl}`);
     response.end();
     return;
   }
@@ -56,7 +68,7 @@ function getContent(responseCachePath, request, response) {
     }
   }
   if (dontCache) {
-    console.log('Serving directly: ' + siteUrl);
+    errorLog.info(`Serving directly: ${siteUrl}`);
     // serve directly
     fetch(request.siteUrl)
       .then(fresponse => {
@@ -72,18 +84,18 @@ function getContent(responseCachePath, request, response) {
       .catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        console.log(err.toString());
+        errorLog.error(`500 response sent, error: ${err.toString()}`);
         response.end();
       });
   } else {
-    console.log('cacheAndRespond: ' + siteUrl);
+    errorLog.info(`cacheAndRespond: ${siteUrl}`);
     cacheAndRespond(siteUrl, responseCachePath, response)
       .then(() => {
         response.end();
       }).catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        console.log('Error from cacheAndResponse' + err.stack);
+        errorLog.error(`Error from cacheAndResponse: ${err.stack}`);
         response.end();
       });
   }

@@ -32,6 +32,7 @@
     "node-fetch": "^2.2.0",
     "node-forge": "^0.7.5",
     "pretty-format": "^23.2.0",
-    "sanitize-filename": "^1.6.1"
+    "sanitize-filename": "^1.6.1",
+    "winston": "^3.0.0"
   }
 }
