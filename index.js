@@ -34,8 +34,8 @@ errorLog.info('Restarting offlineweb');
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
 
-const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || 'test/results/responseDir';
-const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || 'test/results/cacheDir';
+const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/var/cache/offlineweb/responseDir';
+const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/var/cache/offlineweb/cacheDir';
 const port = process.env.OFFLINEWEB_PORT || 3129;
 const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
 
@@ -134,12 +134,12 @@ const tlsOptions = {
   SNICallback: (servername, cb) => {
     console.log('SNICallback servername ' + servername);
     try {
-      certificates.getOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
+      certificates.multiGetOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
         .then(serverCertKey => {
           cb(null, tls.createSecureContext({key: serverCertKey.privateKey, cert: serverCertKey.cert, ca: caCrt}));
         });
     } catch (err) {
-      const error = new TraceError('error in getOrCreateServerCertificate', err);
+      const error = new TraceError('error in multiGetOrCreateServerCertificate', err);
       // in a callback, no way to propagate error upwards
       console.log(error.stack);
     }

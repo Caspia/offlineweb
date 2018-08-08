@@ -126,4 +126,16 @@ describe('certificates module', function() {
       assert(cert2CacheExists, 'example.caspia.com is cached after get');
     });
   });
+
+  describe('multiGetOrCreateServerCertificate', function() {
+    it('gets multiple requests', async function() {
+      this.timeout(30000);
+      const p1 = certificates.multiGetOrCreateServerCertificate('example2.caspia.org', cacheDir, caCertPem, caKeyPem);
+      const p2 = certificates.multiGetOrCreateServerCertificate('example2.caspia.org', cacheDir, caCertPem, caKeyPem);
+      const p3 = certificates.multiGetOrCreateServerCertificate('example2.caspia.org', cacheDir, caCertPem, caKeyPem);
+      const [p1r, p2r, p3r] = await Promise.all([p1, p2, p3]);
+      assert.strictEqual(p1r.cert, p2r.cert, 'certs 1 and 2 are equal');
+      assert.strictEqual(p2r.privateKey, p3r.privateKey, 'keys 2 and 3 are equal');
+    });
+  });
 });

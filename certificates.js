@@ -44,10 +44,11 @@ async function makeServerCertificate(commonName, caCrtPem, caKeyPem) {
     const cert = forge.pki.createCertificate();
     // a large number
     cert.serialNumber = Math.floor(Math.random() * 100000000000000000).toString(10);
-    cert.validity.notBefore = new Date();
+    // notBefore a week earlier than now to handle small clock differences between systems
+    cert.validity.notBefore = new Date(Date.now() - 1000 * 3600 * 24 * 7);
     cert.validity.notAfter = new Date();
     cert.validity.notAfter.setFullYear(
-      cert.validity.notBefore.getFullYear() + 10);
+      cert.validity.notBefore.getFullYear() + 11);
     var attrs = [
       {
         name: 'commonName',
@@ -134,6 +135,18 @@ async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
   }
 }
 
+const certPromises = new Map();
+async function multiGetOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
+  if (certPromises.has(hostname)) {
+    return certPromises.get(hostname);
+  }
+  const promiseHostnameCert = getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem);
+  certPromises.set(hostname, promiseHostnameCert);
+  const {cert, privateKey} = await promiseHostnameCert;
+  certPromises.delete(hostname);
+  return {cert, privateKey};
+}
+
 /**
  * Get a server certificate from cache, or create and cache if needed
  * @param {string} hostname The server hostname, like example.caspia.org
@@ -164,5 +177,6 @@ async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyP
 module.exports = {
   makeServerCertificate,
   cacheCertificate,
-  getOrCreateServerCertificate
+  getOrCreateServerCertificate,
+  multiGetOrCreateServerCertificate
 };
