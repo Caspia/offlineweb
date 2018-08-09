@@ -135,7 +135,17 @@ async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
   }
 }
 
-const certPromises = new Map();
+const certPromises = new Map(); // Active promises to getOrCreateCertificate
+
+/**
+ * Get a server certificate from cache, or create and cache if needed. This variant
+ * combines multiple requests to the same hostname.
+ * @param {string} hostname The server hostname, like example.caspia.org
+ * @param {string} cacheDir Path to the root directory for cached certificates (must exist)
+ * @param {string} caCrtPem Certificate for certificate authority, pem format
+ * @param {string} caKeyPem Private key for the certificate authority, pem format
+ * @returns {CertificateCompletePem} The server key, certificate in pem format
+ */
 async function multiGetOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
   if (certPromises.has(hostname)) {
     return certPromises.get(hostname);

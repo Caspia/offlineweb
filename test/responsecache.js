@@ -18,9 +18,13 @@ describe('responsecache module', function() {
 
   describe('encodeUrl', function() {
     it('encodes a simple url', function() {
-      const {encodedHostname, encodedFilename} = responsecache.encodeUrl('https://website.example.org/index.html');
+      let {encodedHostname, encodedFilename} = responsecache.encodeUrl('https://website.example.org/index.html');
       assert.strictEqual(encodedHostname, 'website.example.org');
       assert.strictEqual(encodedFilename, '%2Findex.html');
+      // hash for long filename
+      const longUrl = 'https://www.example.org/01234567891123456789212345678931234567894123456789512345678961234567897123456789812345678991234567890123456789112345678921234567893123456789.js';
+      ({encodedFilename} = responsecache.encodeUrl(longUrl));
+      assert.strictEqual(encodedFilename, '47870b6a948beab629763b3788e27d9f71c4cc9068865bd38d7e800c496419a8', 'log filenames hash');
     });
 
     it('encoded a more complex url', function() {

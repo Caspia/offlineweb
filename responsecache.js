@@ -7,6 +7,7 @@
 const url = require('url');
 const fs = require('fs-extra');
 const fetch = require('node-fetch');
+const crypto = require('crypto');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
 
@@ -128,7 +129,14 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
 function encodeUrl(siteUrl) {
   const siteUrlObject = url.parse(siteUrl);
   const encodedHostname = encodeURIComponent(siteUrlObject.host);
-  const encodedFilename = encodeURIComponent(siteUrlObject.path);
+  let encodedFilename = encodeURIComponent(siteUrlObject.path);
+
+  // Some urls are too long to be filenames, use a hash instead.
+  if (encodedFilename.length > 128) {
+    const hash = crypto.createHash('sha256');
+    hash.update(encodedFilename);
+    encodedFilename = hash.digest('hex');
+  }
   return {encodedHostname, encodedFilename};
 }
 
