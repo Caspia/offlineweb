@@ -89,7 +89,7 @@ function getContent(responseCachePath, request, response) {
       });
   } else {
     errorLog.info(`cacheAndRespond: ${siteUrl}`);
-    cacheAndRespond(siteUrl, responseCachePath, response)
+    cacheAndRespond(siteUrl, responseCachePath, request, response)
       .then(() => {
         response.end();
       }).catch(err => {
@@ -106,9 +106,10 @@ function getContent(responseCachePath, request, response) {
  *
  * @param {string} siteUrl the url for the desired content
  * @param {string} responseCachePath path to root directory for caching content
+ * @param {http.IncomingMessage} request the request from a node http server (request, response)
  * @param {http.ServerResponse} response the response from a node http server (request, response)
  */
-async function cacheAndRespond(siteUrl, responseCachePath, response) {
+async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
   let isCached = false;
   try {
     isCached = await responsecache.isCached(siteUrl, responseCachePath);
@@ -117,7 +118,12 @@ async function cacheAndRespond(siteUrl, responseCachePath, response) {
   }
   if (!isCached) {
     try {
-      await responsecache.saveToResponseCache(siteUrl, responseCachePath);
+      const options = {};
+      options.headers = {
+        'User-Agent': request.headers['user-agent'],
+        'Accept': request.headers['accept']
+      };
+      await responsecache.saveToResponseCache(siteUrl, responseCachePath, options);
     } catch (err) {
       throw new TraceError('error saving to response cache', err);
     }

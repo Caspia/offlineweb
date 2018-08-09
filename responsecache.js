@@ -39,14 +39,15 @@ async function isCached(siteUrl, responseCachePath) {
  *
  * @param {string} siteUrl the url of the desired content
  * @param {string} responseCachePath path to root directory of content cache
+ * @param {Object} options Pass to fetch, see node-fetch or MDN Fetch API
  */
-async function saveToResponseCache(siteUrl, responseCachePath) {
+async function saveToResponseCache(siteUrl, responseCachePath, options) {
   try {
     const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
     await fs.ensureDir(responseCachePath + '/' + encodedHostname);
     let response;
     try {
-      response = await fetch(siteUrl);
+      response = await fetch(siteUrl, options);
     } catch (err) {
       throw new TraceError('error fetching ' + siteUrl, err);
     }
@@ -90,6 +91,9 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
     const cachedHeaders = JSON.parse(await fs.readFile(urlFilePath + '.headers'));
     if (response.setHeader) {
       response.setHeader('content-type', cachedHeaders['content-type']);
+      if (cachedHeaders['access-control-allow-origin']) {
+        response.setHeader('access-control-allow-origin', cachedHeaders['access-control-allow-origin']);
+      }
     }
     const readStream = fs.createReadStream(urlFilePath);
     await new Promise((resolve, reject) => {
