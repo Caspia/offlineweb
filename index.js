@@ -12,6 +12,7 @@ const URL = require('url').URL;
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
 const logging = require('./logging');
+const utils = require('./utils');
 
 // path to certificate authority certificate
 const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
@@ -56,7 +57,7 @@ function getContent(responseCachePath, request, response) {
     response.statusCode = 405;
     response.statusMessage = 'offlineweb proxy only supports GET';
     errorLog.warn(`non-GET request for siteUrl ${siteUrl}`);
-    response.end();
+    response.end('offlineweb proxy only supports GET');
     return;
   }
   // bypass dont cache sites
@@ -78,6 +79,7 @@ function getContent(responseCachePath, request, response) {
         response.setHeader('content-encoding', 'identity');
         fresponse.body.pipe(response);
         fresponse.body.on('end', () => {
+          errorLog.info(`200 response for ${request.siteUrl}: normal fetch for a dontCache url`);
           response.end();
         });
       })
@@ -85,24 +87,23 @@ function getContent(responseCachePath, request, response) {
         response.statusCode = 500;
         response.statusMessage = err.toString();
         errorLog.error(`500 response sent, error: ${err.toString()}`);
-        response.end();
+        response.end(err.toString());
       });
   } else {
     errorLog.info(`cacheAndRespond: ${siteUrl}`);
     cacheAndRespond(siteUrl, responseCachePath, request, response)
-      .then(() => {
-        response.end();
-      }).catch(err => {
+      .catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        errorLog.error(`Error from cacheAndResponse: ${err.stack}`);
-        response.end();
+        errorLog.error(`Error from cacheAndResponse for ${siteUrl}: ${err.stack}`);
+        response.end(err.toString());
       });
   }
 }
 
 /**
- * Serve http response content from the original site, caching the result.
+ * Serve http response content from the original site, caching the result. This method should complete
+ * * the response (that is call response.end()) unless it throws an error.
  *
  * @param {string} siteUrl the url for the desired content
  * @param {string} responseCachePath path to root directory for caching content
@@ -117,6 +118,14 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
     throw new TraceError('error getting isCached', err);
   }
   if (!isCached) {
+    if (!(await utils.isOnline())) {
+      // Not online and not cached, use error 503, 'unavailable'
+      response.statusCode = 503;
+      response.statusMessage = 'Resource not cached, and we are offline';
+      errorLog.info(`503 response from ${siteUrl}: resource not cached and offline`);
+      response.end('Resource not cached, and we are offline.');
+      return;
+    }
     try {
       const options = {};
       options.headers = {
@@ -130,6 +139,9 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
   }
   try {
     await responsecache.streamFromResponseCache(siteUrl, responseCachePath, response);
+    response.statusCode = 200;
+    errorLog.info(`200 response for ${siteUrl}: successful streamFromResponseCache`);
+    response.end();
   } catch (err) {
     throw new TraceError('errors in streamFromResponseCache', err);
   }

@@ -6,6 +6,7 @@ const responsecache = require('../responsecache');
 const assert = require('assert');
 const fs = require('fs-extra');
 const MemoryStream = require('memorystream');
+const isOnline = require('../utils').isOnline;
 
 const responseDir = 'test/results/responseDir';
 const testUrl = 'https://cdnjs.cloudflare.com/ajax/libs/angular-i18n/1.7.2/angular-locale_en-us.min.js';
@@ -14,6 +15,12 @@ describe('responsecache module', function() {
   this.timeout(10000);
   before(async function() {
     await fs.remove(responseDir);
+  });
+
+  describe('isOnline', function() {
+    it('we are online', async function() {
+      assert(await isOnline(), ' we are online');
+    });
   });
 
   describe('encodeUrl', function() {
