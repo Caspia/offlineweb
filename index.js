@@ -13,6 +13,7 @@ const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-
 const TraceError = require('./utils').TraceError;
 const logging = require('./logging');
 const utils = require('./utils');
+const readconfig = require('./readconfig');
 
 // path to certificate authority certificate
 const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
@@ -25,9 +26,9 @@ const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb
 
 const caCrt = fs.readFileSync(caCrtPath);
 const caKey = fs.readFileSync(caKeyPath);
-const dontCacheSites = [
-  'google.com'
-];
+
+const {includes, excludes, nocaches} = fs.existsSync('url.config')
+  ? readconfig('url.config') : readconfig('url.config.template');
 
 const {errorLog, accessLog} = logging.setupLogging(logFilesPath);
 errorLog.info('Restarting offlineweb');
@@ -60,15 +61,22 @@ function getContent(responseCachePath, request, response) {
     response.end('offlineweb proxy only supports GET');
     return;
   }
-  // bypass dont cache sites
-  let dontCache = false;
-  for (let site of dontCacheSites) {
-    if (siteUrl.startsWith(site)) {
-      dontCache = true;
-      break;
-    }
+
+  // url disposition
+
+  const dontCache = nocaches.some(regex => regex.test(siteUrl));
+  const exclude = excludes.some(regex => regex.test(siteUrl));
+  const include = includes.some(regex => regex.test(siteUrl));
+
+  if (exclude) { // We never respond to these urls
+    response.statusCode = 522;
+    response.statusMessage = 'Resource excluded by cache configuration';
+    errorLog.info(`522 response from ${siteUrl}: resource excluded by cache configuration`);
+    response.end('Resource excluded by cache configuration.');
+    return;
   }
-  if (dontCache) {
+
+  if (!include || dontCache) {
     errorLog.info(`Serving directly: ${siteUrl}`);
     // serve directly
     fetch(request.siteUrl)
@@ -119,10 +127,10 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
   }
   if (!isCached) {
     if (!(await utils.isOnline())) {
-      // Not online and not cached, use error 503, 'unavailable'
-      response.statusCode = 503;
+      // Not online and not cached, use custom error 521, 'unavailable'
+      response.statusCode = 521;
       response.statusMessage = 'Resource not cached, and we are offline';
-      errorLog.info(`503 response from ${siteUrl}: resource not cached and offline`);
+      errorLog.info(`521 response from ${siteUrl}: resource not cached and offline`);
       response.end('Resource not cached, and we are offline.');
       return;
     }

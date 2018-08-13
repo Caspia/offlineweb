@@ -5,8 +5,21 @@
 ::includes
 .*
 
-# Regular expressions of urls to exclude, attempts to access will return code 403, forbidden.
-. 
+# Regular expressions of urls to exclude, attempts to access will return code 522
+::excludes
+services.mozilla.org
+addons.mozilla.org
+services.addons.mozilla.org
+\.buysellads.net
+\.carbonads.com
+connect.facebook.net
+\.adroll.com
+\.doubleclick.net
+\.carbonads.net
+googleadservices.com
+google-analytics.com
 
 # Regular expressions of urls to process via internet but not cache.
-services.mozilla.org
+::nocaches
+blocklist.addons.mozilla.org
+versioncheck-bg.addons.mozilla.org

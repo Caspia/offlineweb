@@ -12,7 +12,9 @@ const tests = [
   ['caspia.org', true, false, false],
   ['google.com', false, true, false],
   ['google-analytics.com', false, true, false],
-  ['https://tiles.services.mozilla.org', false, false, true]
+  ['https://tiles.services.mozilla.org', false, false, true],
+  ['/cdn.sellads.com', false, true, false],
+  ['/sellads.com', false, false, false]
 ];
 
 describe('module readconfig', function() {
