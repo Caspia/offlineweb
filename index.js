@@ -27,7 +27,7 @@ const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb
 const caCrt = fs.readFileSync(caCrtPath);
 const caKey = fs.readFileSync(caKeyPath);
 
-const {includes, excludes, nocaches} = fs.existsSync('url.config')
+const {includes, excludes, nocaches, directs} = fs.existsSync('url.config')
   ? readconfig('url.config') : readconfig('url.config.template');
 
 const {errorLog, accessLog} = logging.setupLogging(logFilesPath);
@@ -53,20 +53,12 @@ function getContent(responseCachePath, request, response) {
   const siteUrl = (new URL(request.url, 'http://' + request.headers.host)).toString();
   errorLog.info(`siteUrl: ${siteUrl}`);
 
-  // We only support GET
-  if (request.method !== 'GET') {
-    response.statusCode = 405;
-    response.statusMessage = 'offlineweb proxy only supports GET';
-    errorLog.warn(`non-GET request for siteUrl ${siteUrl}`);
-    response.end('offlineweb proxy only supports GET');
-    return;
-  }
-
   // url disposition
 
   const dontCache = nocaches.some(regex => regex.test(siteUrl));
   const exclude = excludes.some(regex => regex.test(siteUrl));
   const include = includes.some(regex => regex.test(siteUrl));
+  const direct = directs.some(regex => regex.test(siteUrl));
 
   if (exclude) { // We never respond to these urls
     response.statusCode = 522;
@@ -76,7 +68,16 @@ function getContent(responseCachePath, request, response) {
     return;
   }
 
-  if (!include || dontCache) {
+  // We only support GET, except for direct
+  if (request.method !== 'GET' && !direct) {
+    response.statusCode = 405;
+    response.statusMessage = 'offlineweb proxy only supports GET except for "direct" requests';
+    errorLog.warn(`non-GET request for siteUrl ${siteUrl}`);
+    response.end('offlineweb proxy only supports GET except for "direct" requests');
+    return;
+  }
+
+  if (!include || dontCache || direct) {
     errorLog.info(`Serving directly: ${siteUrl}`);
     // serve directly
     fetch(request.siteUrl)
@@ -85,9 +86,11 @@ function getContent(responseCachePath, request, response) {
         //   response.setHeader(pair[0], pair[1]);
         // }
         response.setHeader('content-encoding', 'identity');
-        fresponse.body.pipe(response);
+        if (direct && (request.method === 'POST' || request.method === 'PUT')) {
+          fresponse.body.pipe(response);
+        }
         fresponse.body.on('end', () => {
-          errorLog.info(`200 response for ${request.siteUrl}: normal fetch for a dontCache url`);
+          errorLog.info(`200 response for ${request.siteUrl}: normal fetch for non-cached url`);
           response.end();
         });
       })

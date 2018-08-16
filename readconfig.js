@@ -5,13 +5,14 @@
  *
  * The config file has three sections, for items to include, exclude,
  * and items to always bypass cache and read from internet. These sections
- * are denoted by lines beginning with ::includes, ::excludes, and ::nocaches
- *
+ * are denoted by lines beginning with ::includes, ::excludes, ::nocaches
+ * and :directs,
  * Blank lines, or lines beginning with #, are ignored.
  *
  * @param path{string} The file path
- * @returns {Object} {includes, excludes, nocaches}: Arrays of regexs of urls to include,
- *                   exclude, and process directly.
+ * @returns {Object} {includes, excludes, nocaches, directs}: Arrays of regexs of urls to include,
+ *                   exclude, process directly except while offline, and process directly even if
+ *                   offline.
  */
 module.exports = function(path) {
   const lines = require('fs')
@@ -22,6 +23,7 @@ module.exports = function(path) {
   const includes = [];
   const excludes = [];
   const nocaches = [];
+  const directs = [];
 
   let active = includes;
   for (let line of lines) {
@@ -44,7 +46,11 @@ module.exports = function(path) {
       active = nocaches;
       continue;
     }
+    if (line.startsWith('::directs')) {
+      active = directs;
+      continue;
+    }
     active.push(RegExp(line));
   }
-  return {includes, excludes, nocaches};
+  return {includes, excludes, nocaches, directs};
 };

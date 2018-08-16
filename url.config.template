@@ -8,8 +8,6 @@
 # Regular expressions of urls to exclude, attempts to access will return code 522
 ::excludes
 services.mozilla.org
-addons.mozilla.org
-services.addons.mozilla.org
 \.buysellads.net
 \.carbonads.com
 connect.facebook.net
@@ -23,3 +21,10 @@ google-analytics.com
 ::nocaches
 blocklist.addons.mozilla.org
 versioncheck-bg.addons.mozilla.org
+
+# Regular expressions of urls to always fully process direct (no cache) even while offline.
+# This is intended to support the .ed domains made available by nginx-proxy.
+::directs
+\.ed\.?$
+addons.mozilla.org
+services.addons.mozilla.org
