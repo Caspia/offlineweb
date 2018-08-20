@@ -147,14 +147,18 @@ const certPromises = new Map(); // Active promises to getOrCreateCertificate
  * @returns {CertificateCompletePem} The server key, certificate in pem format
  */
 async function multiGetOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem) {
-  if (certPromises.has(hostname)) {
-    return certPromises.get(hostname);
+  try {
+    if (certPromises.has(hostname)) {
+      return certPromises.get(hostname);
+    }
+    const promiseHostnameCert = getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem);
+    certPromises.set(hostname, promiseHostnameCert);
+    const {cert, privateKey} = await promiseHostnameCert;
+    certPromises.delete(hostname);
+    return {cert, privateKey};
+  } catch (error) {
+      throw new TraceError('error in multiGetOrCreateServerCertificate', error.stack);
   }
-  const promiseHostnameCert = getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyPem);
-  certPromises.set(hostname, promiseHostnameCert);
-  const {cert, privateKey} = await promiseHostnameCert;
-  certPromises.delete(hostname);
-  return {cert, privateKey};
 }
 
 /**
@@ -180,6 +184,7 @@ async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyP
     }
     return {cert, privateKey};
   } catch (error) {
+    console.log('Unexpected error in getOrCreateServerCertificate: ' + error + ' stack: ' + error.stack);
     throw new TraceError('Unexpected error in getOrCreateServerCertificate', error.stack);
   }
 }

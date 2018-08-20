@@ -22,7 +22,7 @@ const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
 const caKeyPath = process.env.OFFLINEWEB_CAKEYPATH || 'test/ca.key';
 
 // path to log files
-const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb';
+const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '~/offlineweb/log';
 
 const caCrt = fs.readFileSync(caCrtPath);
 const caKey = fs.readFileSync(caKeyPath);
@@ -36,8 +36,11 @@ errorLog.info('Restarting offlineweb');
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
 
-const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/var/cache/offlineweb/responseDir';
-const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/var/cache/offlineweb/cacheDir';
+const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/home/node/offlineweb/responseDir';
+const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/home/node/offlineweb/cacheDir';
+fs.ensureDirSync(responseCachePath);
+fs.ensureDirSync(certificateCachePath);
+
 const port = process.env.OFFLINEWEB_PORT || 3129;
 const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
 

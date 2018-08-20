@@ -28,7 +28,9 @@ function setupLogging(logFilesPath) {
     return `${info.timestamp} ${info.level}: ${info.message}`;
   });
 
-  fs.ensureDirSync(logFilesPath);
+  if (!fs.existsSync(logFilesPath)) {
+    fs.ensureDirSync(logFilesPath);
+  }
 
   const errorFileTransport = new transports.File(
     {
