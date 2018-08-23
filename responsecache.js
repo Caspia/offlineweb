@@ -8,6 +8,7 @@ const url = require('url');
 const fs = require('fs-extra');
 const fetch = require('node-fetch');
 const crypto = require('crypto');
+const dockerports = require('./dockerports');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
 
@@ -46,6 +47,23 @@ async function saveToResponseCache(siteUrl, responseCachePath, options) {
     const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
     await fs.ensureDir(responseCachePath + '/' + encodedHostname);
     let response;
+
+    // add ports to any VIRTUAL_HOSTS
+    const siteUrlObject = new url.URL(siteUrl);
+    const ports = await dockerports.getPorts();
+    const host = siteUrlObject.host;
+    if (ports[host]) {
+      if (ports[host].httpPort) {
+        siteUrlObject.protocol = 'http';
+        siteUrlObject.port = ports[host].httpPort;
+      }
+      else if (ports[host].httpsPort) {
+        siteUrlObject.protocol = 'https';
+        siteUrlObject.port = ports[host].httpsPort;
+      }
+      siteUrl = siteUrlObject.toString();
+      // console.log(`siteUrl fixed to ${siteUrl}`);
+    }
     try {
       response = await fetch(siteUrl, options);
     } catch (err) {

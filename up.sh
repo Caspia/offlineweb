@@ -9,6 +9,9 @@ if [ -z "$OFFLINE" ]; then
   docker build -t caspia/offlineweb:latest .
 fi
 
-docker run -d -p "443:3130" \
+docker run -p "80:3129" -p "443:3130" \
+  -v /var/run/docker.sock:/tmp/docker.sock:ro \
   --name offlineweb --ip="172.20.0.100" \
-  --network="beluga" --rm caspia/offlineweb:latest
+  --network="beluga" --rm \
+  --cap-add NET_ADMIN \
+  caspia/offlineweb:latest

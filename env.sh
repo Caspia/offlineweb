@@ -3,6 +3,9 @@
 # extend dnsmasq to answer the docker host IP for any query
 DNSMASQ_EXTRA="--address=/#/${IP_ADDR}"
 
+# offlineweb will handle http instead of nginx-proxy
+WEBHANDLER="offlineweb"
+
 # location of the certificate authority certificate
 #OFFLINEWEB_CACRTPATH='test/ca.crt'
 

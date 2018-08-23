@@ -28,6 +28,7 @@
     "mocha": "^5.2.0"
   },
   "dependencies": {
+    "dockerode": "^2.5.5",
     "fs-extra": "^7.0.0",
     "node-fetch": "^2.2.0",
     "node-forge": "^0.7.5",

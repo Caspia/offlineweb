@@ -3,13 +3,14 @@
  * @file
  */
 
+const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
+
 const http = require('http');
 const tls = require('tls');
 const https = require('https');
 const fetch = require('node-fetch');
 const fs = require('fs-extra');
 const URL = require('url').URL;
-const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
 const logging = require('./logging');
 const utils = require('./utils');
@@ -22,7 +23,7 @@ const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
 const caKeyPath = process.env.OFFLINEWEB_CAKEYPATH || 'test/ca.key';
 
 // path to log files
-const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '~/offlineweb/log';
+const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb/log';
 
 const caCrt = fs.readFileSync(caCrtPath);
 const caKey = fs.readFileSync(caKeyPath);
@@ -36,8 +37,8 @@ errorLog.info('Restarting offlineweb');
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
 
-const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/home/node/offlineweb/responseDir';
-const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/home/node/offlineweb/cacheDir';
+const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/var/cache/offlineweb/responseDir';
+const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/var/cache/offlineweb/cacheDir';
 fs.ensureDirSync(responseCachePath);
 fs.ensureDirSync(certificateCachePath);
 
