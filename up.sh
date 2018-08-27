@@ -11,6 +11,9 @@ fi
 
 docker run -p "80:3129" -p "443:3130" \
   -v /var/run/docker.sock:/tmp/docker.sock:ro \
+  -v $OFFLINEWEB_CACHEPATH:/var/cache/offlineweb \
+  -v $OFFLINEWEB_LOGPATH:/var/log/offlineweb \
+  -v $OFFLINEWEB_CERTIFICATEPATH:/root/app/certificates:ro
   --name offlineweb --ip="172.20.0.100" \
   --network="beluga" --rm \
   --cap-add NET_ADMIN \
