@@ -1,4 +1,5 @@
-# environment template for offlineweb. Append to beluga/.env and modify as appropriate.
+
+# === environment template for offlineweb. Append to beluga/.env and modify as appropriate. ===
 
 # extend dnsmasq to answer the docker host IP for any query. This is not typically
 # changed during configuration, but should be left at this value. 

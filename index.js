@@ -17,13 +17,18 @@ const utils = require('./utils');
 const readconfig = require('./readconfig');
 
 // path to certificate authority certificate
-const caCrtPath = process.env.OFFLINEWEB_CACRTPATH || 'test/ca.crt';
+
+// There should be a volume pointing to /root/app/certificates but if missing or empty,
+// default to the test certificates.
+
+const caPath = fs.existsSync('certificates/ca.crt') ? 'certificates' : 'test'
+const caCrtPath = caPath + '/ca.crt';
 
 // path to certificate authority private key
-const caKeyPath = process.env.OFFLINEWEB_CAKEYPATH || 'test/ca.key';
+const caKeyPath = caPath + '/ca.key';
 
 // path to log files
-const logFilesPath = process.env.OFFLINEWEB_LOGFILESPATH || '/var/log/offlineweb/log';
+const logFilesPath = '/var/log/offlineweb';
 
 const caCrt = fs.readFileSync(caCrtPath);
 const caKey = fs.readFileSync(caKeyPath);
@@ -37,8 +42,8 @@ errorLog.info('Restarting offlineweb');
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
 
-const responseCachePath = process.env.OFFLINEWEB_RESPONSECACHEPATH || '/var/cache/offlineweb/responseDir';
-const certificateCachePath = process.env.OFFLINEWEB_CERTIFICATECACHEPATH || '/var/cache/offlineweb/cacheDir';
+const responseCachePath = '/var/cache/offlineweb/responseDir';
+const certificateCachePath = '/var/cache/offlineweb/cacheDir';
 fs.ensureDirSync(responseCachePath);
 fs.ensureDirSync(certificateCachePath);
 

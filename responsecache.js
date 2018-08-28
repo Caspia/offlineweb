@@ -108,7 +108,11 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
     // get content type
     const cachedHeaders = JSON.parse(await fs.readFile(urlFilePath + '.headers'));
     if (response.setHeader) {
-      response.setHeader('content-type', cachedHeaders['content-type']);
+      if (cachedHeaders['content-type']) {
+        response.setHeader('content-type', cachedHeaders['content-type']);
+      } else {
+        log.warn(`No content-type for response from ${siteUrl}`);
+      }
       if (cachedHeaders['access-control-allow-origin']) {
         response.setHeader('access-control-allow-origin', cachedHeaders['access-control-allow-origin']);
       }
