@@ -24,8 +24,11 @@ let accessLog;
 function setupLogging(logFilesPath) {
   const { createLogger, format, transports } = winston;
   const { combine, timestamp, printf } = format;
-  const myFormat = printf(info => {
+  const fileFormat = printf(info => {
     return `${info.timestamp} ${info.level}: ${info.message}`;
+  });
+  const consoleFormat = printf(info => {
+    return `${info.level}: ${info.message}`;
   });
 
   if (!fs.existsSync(logFilesPath)) {
@@ -40,12 +43,18 @@ function setupLogging(logFilesPath) {
     }
   );
   errorLog = createLogger({
-    level: 'info',
+    level: 'verbose',
     transports: [
-      new transports.Console({level: 'warn'}),
+      new transports.Console(
+        {
+          level: 'info',
+          format: combine(
+            winston.format.colorize(),
+            consoleFormat)
+        }),
       errorFileTransport
     ],
-    format: combine(format.colorize(), timestamp(), myFormat)
+    format: combine(timestamp(), fileFormat)
   });
 
   const accessFileTransport = new transports.File(
@@ -60,7 +69,7 @@ function setupLogging(logFilesPath) {
     transports: [
       accessFileTransport
     ],
-    format: combine(timestamp(), myFormat)
+    format: combine(timestamp(), fileFormat)
   });
 
   function closeMe() {
@@ -82,6 +91,8 @@ function setupLogging(logFilesPath) {
   process.on('SIGTERM', function() {
     closeMe();
   });
+  module.exports.errorLog = errorLog;
+  module.exports.accessLog = accessLog;
   return {errorLog, accessLog};
 }
 

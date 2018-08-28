@@ -16,6 +16,7 @@ connect.facebook.net
 \.carbonads.net
 googleadservices.com
 google-analytics.com
+\.eloqua.com
 
 # Regular expressions of urls to process via internet but not cache.
 ::nocaches

@@ -37,7 +37,7 @@ const {includes, excludes, nocaches, directs} = fs.existsSync('url.config')
   ? readconfig('url.config') : readconfig('url.config.template');
 
 const {errorLog, accessLog} = logging.setupLogging(logFilesPath);
-errorLog.info('Restarting offlineweb');
+errorLog.warn('Restarting offlineweb');
 
 const responsecache = require('./responsecache');
 const certificates = require('./certificates');
@@ -60,7 +60,7 @@ const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
 function getContent(responseCachePath, request, response) {
   accessLog.info(`host: ${request.headers.host} url: ${request.url} method: ${request.method}`);
   const siteUrl = (new URL(request.url, 'http://' + request.headers.host)).toString();
-  errorLog.info(`siteUrl: ${siteUrl}`);
+  errorLog.verbose(`getContent for: ${siteUrl}`);
 
   // url disposition
 
@@ -72,7 +72,7 @@ function getContent(responseCachePath, request, response) {
   if (exclude) { // We never respond to these urls
     response.statusCode = 522;
     response.statusMessage = 'Resource excluded by cache configuration';
-    errorLog.info(`522 response from ${siteUrl}: resource excluded by cache configuration`);
+    errorLog.info(`resource excluded by cache configuration: ${siteUrl}`);
     response.end('Resource excluded by cache configuration.');
     return;
   }
@@ -81,7 +81,7 @@ function getContent(responseCachePath, request, response) {
   if (request.method !== 'GET' && !direct) {
     response.statusCode = 405;
     response.statusMessage = 'offlineweb proxy only supports GET except for "direct" requests';
-    errorLog.warn(`non-GET request for siteUrl ${siteUrl}`);
+    errorLog.info(`non-GET request for siteUrl ${siteUrl}`);
     response.end('offlineweb proxy only supports GET except for "direct" requests');
     return;
   }
@@ -99,7 +99,7 @@ function getContent(responseCachePath, request, response) {
           fresponse.body.pipe(response);
         }
         fresponse.body.on('end', () => {
-          errorLog.info(`200 response for ${request.siteUrl}: normal fetch for non-cached url`);
+          errorLog.verbose(`200 response for ${request.siteUrl}: normal fetch for non-cached url`);
           response.end();
         });
       })
@@ -142,7 +142,7 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
       // Not online and not cached, use custom error 521, 'unavailable'
       response.statusCode = 521;
       response.statusMessage = 'Resource not cached, and we are offline';
-      errorLog.info(`521 response from ${siteUrl}: resource not cached and offline`);
+      errorLog.verbose(`521 response from ${siteUrl}: resource not cached and offline`);
       response.end('Resource not cached, and we are offline.');
       return;
     }
@@ -160,7 +160,7 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
   try {
     await responsecache.streamFromResponseCache(siteUrl, responseCachePath, response);
     response.statusCode = 200;
-    errorLog.info(`200 response for ${siteUrl}: successful streamFromResponseCache`);
+    errorLog.verbose(`200 response for ${siteUrl}: successful streamFromResponseCache`);
     response.end();
   } catch (err) {
     throw new TraceError('errors in streamFromResponseCache', err);
@@ -170,7 +170,7 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
 const tlsOptions = {
   rejectUnauthorized: true,
   SNICallback: (servername, cb) => {
-    console.log('SNICallback servername ' + servername);
+    errorLog.info('SNICallback servername ' + servername);
     try {
       certificates.multiGetOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
         .then(serverCertKey => {

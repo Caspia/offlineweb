@@ -2,8 +2,6 @@
 
 # script to bring up transparent web cache app offlineweb
 
-docker network create beluga 2>/dev/null
-
 if [ -z "$OFFLINE" ]; then
   docker image rm caspia/offlineweb:latest
   docker build -t caspia/offlineweb:latest .

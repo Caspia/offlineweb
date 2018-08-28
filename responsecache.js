@@ -111,7 +111,7 @@ async function streamFromResponseCache(siteUrl, responseCachePath, response) {
       if (cachedHeaders['content-type']) {
         response.setHeader('content-type', cachedHeaders['content-type']);
       } else {
-        log.warn(`No content-type for response from ${siteUrl}`);
+        require('./logging').errorLog.warn(`No content-type for response from ${siteUrl}`);
       }
       if (cachedHeaders['access-control-allow-origin']) {
         response.setHeader('access-control-allow-origin', cachedHeaders['access-control-allow-origin']);
