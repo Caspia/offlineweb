@@ -16,6 +16,10 @@ const logging = require('./logging');
 const utils = require('./utils');
 const readconfig = require('./readconfig');
 
+// We will run as root, but created files will be manipulated by a non-root
+// user. Just let permissions be wide open to reduce headaches.
+process.umask(0);
+
 // web timeout in milliseconds
 const webtimeout = process.env.OFFLINEWEB_WEBTIMEOUT || 5000;
 

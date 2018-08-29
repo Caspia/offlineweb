@@ -7,10 +7,11 @@ if [ -z "$OFFLINE" ]; then
   docker build -t caspia/offlineweb:latest .
 fi
 
-mkdir -p "$OFFLINEWEB_CACHEPATH"
-mkdir -p "$OFFLINEWEB_LOGPATH"
-mkdir -p "$OFFLINEWEB_CERTIFICATEPATH"
+mkdir -p "$OFFLINEWEB_CACHEPATH" -m777
+mkdir -p "$OFFLINEWEB_LOGPATH" -m777
+mkdir -p "$OFFLINEWEB_CERTIFICATEPATH" -m777
 
+docker container rm --force offlineweb 2>/dev/null
 docker run -p "80:3129" -p "443:3130" -d --restart=always\
   -v /var/run/docker.sock:/tmp/docker.sock:ro \
   -v $OFFLINEWEB_CACHEPATH:/var/cache/offlineweb \
