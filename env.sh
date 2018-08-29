@@ -10,13 +10,13 @@ DNSMASQ_EXTRA="--address=/#/${IP_ADDR}"
 WEBHANDLER="offlineweb"
 
 # location of the certificate authority certificate files ca.key and ca.crt.
-OFFLINEWEB_CERTIFICATEPATH='$HOME/offlineweb'
+OFFLINEWEB_CERTIFICATEPATH="$HOME/offlineweb"
 
 # location of the log files
-OFFLINEWEB_LOGPATH='$HOME/offlineweb/log'
+OFFLINEWEB_LOGPATH="$HOME/offlineweb/log"
 
 # location of the response directory containing cached web content and generated certificates
-OFFLINEWEB_CACHEPATH='$HOME/offlineweb/cache'
+OFFLINEWEB_CACHEPATH="$HOME/offlineweb/cache"
 
 # Port used for http connections
 OFFLINEWEB_PORT=3129
