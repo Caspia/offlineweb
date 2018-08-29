@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const dockerports = require('./dockerports');
 const prettyFormat = require('pretty-format'); // eslint-disable-line no-unused-vars
 const TraceError = require('./utils').TraceError;
+const utils = require('./utils');
 
 /**
  * Does content for a url exist in the cache?
@@ -41,8 +42,9 @@ async function isCached(siteUrl, responseCachePath) {
  * @param {string} siteUrl the url of the desired content
  * @param {string} responseCachePath path to root directory of content cache
  * @param {Object} options Pass to fetch, see node-fetch or MDN Fetch API
+ * @param {Number} timeout web timeout in milliseconds
  */
-async function saveToResponseCache(siteUrl, responseCachePath, options) {
+async function saveToResponseCache(siteUrl, responseCachePath, options, timeout = 5000) {
   try {
     const {encodedHostname, encodedFilename} = encodeUrl(siteUrl);
     await fs.ensureDir(responseCachePath + '/' + encodedHostname);
@@ -65,7 +67,7 @@ async function saveToResponseCache(siteUrl, responseCachePath, options) {
       // console.log(`siteUrl fixed to ${siteUrl}`);
     }
     try {
-      response = await fetch(siteUrl, options);
+      response = await utils.fetchWithTimeout(siteUrl, options, timeout);
     } catch (err) {
       throw new TraceError('error fetching ' + siteUrl, err);
     }

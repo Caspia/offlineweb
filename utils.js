@@ -4,6 +4,7 @@
  */
 
 const dns = require('dns');
+const fetch = require('node-fetch');
 
 /** Error type that traces through promises */
 class TraceError extends Error {
@@ -50,7 +51,27 @@ async function isOnline() {
   });
 }
 
+/**
+ * Web fetch request with a timeout
+ * @param url{string} - the web resource to fetch
+ * @param options{Object} - options item for the web fetch command
+ * @param timeout{Number} - time in milliseconds, defaults to 5000
+ * @returns{Promise} - promise that resolves on fetch, rejects on timeout or
+ *  fetch error, whichever comes first
+ * 
+ * @see https://stackoverflow.com/questions/46946380/fetch-api-request-timeout
+ */
+function fetchWithTimeout(url, options, timeout = 5000) {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), timeout);
+    })
+  ])
+}
+
 module.exports = {
   TraceError,
-  isOnline
+  isOnline,
+  fetchWithTimeout
 };

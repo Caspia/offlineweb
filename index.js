@@ -16,6 +16,11 @@ const logging = require('./logging');
 const utils = require('./utils');
 const readconfig = require('./readconfig');
 
+// web timeout in milliseconds
+const webtimeout = process.env.OFFLINEWEB_WEBTIMEOUT || 5000;
+
+// number of web browser instances
+const webinstances = process.env.OFFLINEWEB_WEBINSTANCES || 1;
 // path to certificate authority certificate
 
 // There should be a volume pointing to /root/app/certificates but if missing or empty,
@@ -56,8 +61,9 @@ const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
  * @param {string} responseCachePath path to root directory for caching content
  * @param {http.IncomingMessage} request the request from a node http server (request, response)
  * @param {http.ServerResponse} response the response from a node http server (request, response)
+ * @param {Number} timeout web timeout in millisecods
  */
-function getContent(responseCachePath, request, response) {
+function getContent(responseCachePath, request, response, timeout = 5000) {
   accessLog.info(`host: ${request.headers.host} url: ${request.url} method: ${request.method}`);
   const siteUrl = (new URL(request.url, 'http://' + request.headers.host)).toString();
   errorLog.verbose(`getContent for: ${siteUrl}`);
@@ -78,18 +84,19 @@ function getContent(responseCachePath, request, response) {
   }
 
   // We only support GET, except for direct
-  if (request.method !== 'GET' && !direct) {
+  const allowedMethods = ['GET', 'HEAD'];
+  if (!allowedMethods.includes(request.method) && !direct) {
     response.statusCode = 405;
-    response.statusMessage = 'offlineweb proxy only supports GET except for "direct" requests';
-    errorLog.info(`non-GET request for siteUrl ${siteUrl}`);
-    response.end('offlineweb proxy only supports GET except for "direct" requests');
+    response.statusMessage = 'unsupported offlineweb web method';
+    errorLog.info(`unsupport web method ${request.method} we support ${allowedMethods.join()} for siteUrl ${siteUrl}`);
+    response.end(response.statusMessage);
     return;
   }
 
   if (!include || dontCache || direct) {
     errorLog.info(`Serving directly: ${siteUrl}`);
     // serve directly
-    fetch(request.siteUrl)
+    utils.fetchWithTimeout(request.siteUrl, {}, webtimeout)
       .then(fresponse => {
         // for (let pair of fresponse.headers.entries()) {
         //   response.setHeader(pair[0], pair[1]);
@@ -111,7 +118,7 @@ function getContent(responseCachePath, request, response) {
       });
   } else {
     errorLog.info(`cacheAndRespond: ${siteUrl}`);
-    cacheAndRespond(siteUrl, responseCachePath, request, response)
+    cacheAndRespond(siteUrl, responseCachePath, request, response, timeout)
       .catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
@@ -129,8 +136,9 @@ function getContent(responseCachePath, request, response) {
  * @param {string} responseCachePath path to root directory for caching content
  * @param {http.IncomingMessage} request the request from a node http server (request, response)
  * @param {http.ServerResponse} response the response from a node http server (request, response)
+ * @param {Number} timeout web timeout in milliseconds
  */
-async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
+async function cacheAndRespond(siteUrl, responseCachePath, request, response, timeout = 5000) {
   let isCached = false;
   try {
     isCached = await responsecache.isCached(siteUrl, responseCachePath);
@@ -152,7 +160,7 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response) {
         'User-Agent': request.headers['user-agent'],
         'Accept': request.headers['accept']
       };
-      await responsecache.saveToResponseCache(siteUrl, responseCachePath, options);
+      await responsecache.saveToResponseCache(siteUrl, responseCachePath, options, timeout);
     } catch (err) {
       throw new TraceError('error saving to response cache', err);
     }
@@ -186,14 +194,14 @@ const tlsOptions = {
 
 const httpsServer = https.createServer(tlsOptions);
 httpsServer.on('request', (request, response) => {
-  getContent(responseCachePath, request, response);
+  getContent(responseCachePath, request, response, webtimeout);
 });
 httpsServer.listen(tlsport);
 console.log('https:// server is listening on port ' + tlsport);
 
 const httpServer = http.createServer();
 httpServer.on('request', (request, response) => {
-  getContent(responseCachePath, request, response);
+  getContent(responseCachePath, request, response, webtimeout);
 });
 httpServer.listen(port);
 console.log('http:// server is listening on port ' + port);
