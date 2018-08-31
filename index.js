@@ -53,8 +53,8 @@ const certificates = require('./certificates');
 
 const responseCachePath = '/var/cache/offlineweb/responseDir';
 const certificateCachePath = '/var/cache/offlineweb/cacheDir';
-fs.ensureDirSync(responseCachePath);
-fs.ensureDirSync(certificateCachePath);
+fs.ensureDirSync(responseCachePath, {mode: 0o777});
+fs.ensureDirSync(certificateCachePath, {mode: 0o777});
 
 const port = process.env.OFFLINEWEB_PORT || 3129;
 const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
@@ -186,7 +186,25 @@ const tlsOptions = {
     try {
       certificates.multiGetOrCreateServerCertificate(servername, certificateCachePath, caCrt, caKey)
         .then(serverCertKey => {
-          cb(null, tls.createSecureContext({key: serverCertKey.privateKey, cert: serverCertKey.cert, ca: caCrt}));
+          let checkCertError = null;
+          function checkCert() {
+            let ctx;
+            try {
+              errorLog.verbose(`checking certificate for servername ${servername}`);
+              ctx = tls.createSecureContext({key: serverCertKey.privateKey, cert: serverCertKey.cert, ca: caCrt});
+              errorLog.verbose(`Successful cert check for ${servername}`);
+            } catch (err) {
+              checkCertError = err;
+            }
+            return ctx;
+          }
+          const ctx = checkCert();
+          cb(null, ctx);
+          if (checkCertError) {
+            const error = new TraceError('failure in checkCert', checkCertError);
+            errorLog.error(`Failure checking certificate for ${servername}`, error.stack);
+            checkCertError = null;
+          }
         });
     } catch (err) {
       const error = new TraceError('error in multiGetOrCreateServerCertificate', err);

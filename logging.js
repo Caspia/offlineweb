@@ -32,13 +32,13 @@ function setupLogging(logFilesPath) {
   });
 
   if (!fs.existsSync(logFilesPath)) {
-    fs.ensureDirSync(logFilesPath);
+    fs.ensureDirSync(logFilesPath, {mode: 0o777});
   }
 
   const errorFileTransport = new transports.File(
     {
       filename: logFilesPath + '/error.log',
-      maxsize: 100000,
+      maxsize: 1000000,
       maxFiles: 3
     }
   );
@@ -60,7 +60,7 @@ function setupLogging(logFilesPath) {
   const accessFileTransport = new transports.File(
     {
       filename: logFilesPath + '/access.log',
-      maxsize: 100000,
+      maxsize: 1000000,
       maxFiles: 3
     }
   );

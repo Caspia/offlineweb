@@ -116,7 +116,7 @@ async function cacheCertificate(certPem, keyPem, cacheDir, force = false) {
   try {
     const cacheDirExists = await fs.pathExists(cacheDir);
     if (!cacheDirExists) {
-      throw new Error('certificates.cacheCertificate: cacheDir must exist');
+      throw new Error(`certificates.cacheCertificate: cacheDir must exist: ${cacheDir}`);
     }
     const certForge = forge.pki.certificateFromPem(certPem);
     const hostname = certForge.subject.getField('CN').value;
@@ -173,14 +173,21 @@ async function getOrCreateServerCertificate(hostname, cacheDir, caCrtPem, caKeyP
   try {
     const cachedCertPath = cacheDir + '/' + hostname;
     const cachedKeyPath = cachedCertPath + '.key';
+    const log = require('./logging').errorLog;
     let cert; // the server certificate to return in pem format
     let privateKey; // the server key in pem format
     if (await fs.pathExists(cachedCertPath)) {
       cert = await fs.readFile(cachedCertPath, 'ascii');
       privateKey = await fs.readFile(cachedKeyPath, 'ascii');
+      log.verbose(`found existing certificate at ${cachedCertPath}`)
     } else {
       ({cert, privateKey} = await makeServerCertificate(hostname, caCrtPem, caKeyPem));
-      await cacheCertificate(cert, privateKey, cacheDir);
+      const didWrite = await cacheCertificate(cert, privateKey, cacheDir);
+      if (didWrite) {
+        log.info(`Created new cached certificate at ${cachedCertPath}`);
+      } else {
+        log.error(`makeServerCertificate but did not write for ${hostname}?`);
+      }
     }
     return {cert, privateKey};
   } catch (error) {

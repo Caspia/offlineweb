@@ -12,9 +12,9 @@ WORKDIR /root/app
 ENV NODE_ENV production
 COPY . /root/app
 #RUN chmod 755 bin/*
-RUN chown node:node -R .
 # Switching to user node is now disabled, more trouble than worth in out isolated environments
-#USER node
+# RUN chown node:node -R .
+USER root
 RUN npm install
 
 EXPOSE 3129 3130

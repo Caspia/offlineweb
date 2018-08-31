@@ -1,15 +1,14 @@
 #!/bin/bash
 
 # script to bring up transparent web cache app offlineweb
-
-if [ -z "$OFFLINE" ]; then
-  docker image rm caspia/offlineweb:latest
-  docker build -t caspia/offlineweb:latest .
-fi
+echo ""
+echo "=== OFFLINEWEB going up"
+echo ""
 
 mkdir -p "$OFFLINEWEB_CACHEPATH" -m777
 mkdir -p "$OFFLINEWEB_LOGPATH" -m777
 mkdir -p "$OFFLINEWEB_CERTIFICATEPATH" -m777
+echo "OFFLINEWEB_LOGPATH is ${OFFLINEWEB_LOGPATH}"
 
 docker container rm --force offlineweb 2>/dev/null
 docker run -p "80:3129" -p "443:3130" -d --restart=always\
