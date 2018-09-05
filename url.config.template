@@ -27,6 +27,7 @@ versioncheck-bg\.addons\.mozilla\.org
 \.data\.microsoft\.com
 addons\.mozilla\.org
 services\.addons\.mozilla.org
+\.services\.mozilla\.com\/
 
 # Regular expressions of urls to always fully process direct (no cache) even while offline.
 # This is intended to support the .ed domains made available by nginx-proxy.

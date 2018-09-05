@@ -1,10 +1,19 @@
-#!/bin/bash
-#sysctl -w net.ipv4.ip_forward=1
-iptables -t nat -N OFFLINEWEB
-iptables -t nat -F OFFLINEWEB
-#iptables -t nat -A OFFLINEWEB -p tcp ! -s 172.20.0.100 --dport 80 -j REDIRECT --to-port 3129
-#iptables -t nat -A OFFLINEWEB -p tcp ! -s 172.20.0.100 --dport 443 -j REDIRECT --to-port 3130
-iptables -t nat -D PREROUTING -j OFFLINEWEB
-iptables -t nat -A PREROUTING -j OFFLINEWEB
-iptables -t nat -D POSTROUTING -j MASQUERADE
-#iptables -t nat -A POSTROUTING -j MASQUERADE
+#!/bin/sh
+#
+# Use iptables (on a Linux system) to route http and https packets from
+# a remote client
+#
+
+# The address of the offlineweb server
+OFFLINEWEB_IP=172.20.0.100
+# The IP address of the dnsmasq server
+DNS_IP=172.20.0.101
+
+# log of startup to confirm working
+date >> /var/log/rc.local
+
+iptables -t nat -A PREROUTING -p tcp ! -s $OFFLINEWEB_IP --dport 80 -j DNAT --to-destination $OFFLINEWEB_IP:3129
+iptables -t nat -A PREROUTING -p tcp ! -s $OFFLINEWEB_IP --dport 443 -j DNAT --to-destination $OFFLINEWEB_IP:3130
+iptables -t nat -A PREROUTING -p tcp ! -s $DNS_IP --dport 53 -j DNAT --to-destination $DNS_IP:53
+iptables -t nat -A PREROUTING -p udp ! -s $DNS_IP --dport 53 -j DNAT --to-destination $DNS_IP:53]
+iptables -P FORWARD ACCEPT

@@ -1,7 +1,7 @@
 FROM node:10.3-alpine
 
 # local dns
-RUN apk add --no-cache dnsmasq
+# RUN apk add --no-cache dnsmasq
 # utilities helpful in development, optional in production
 RUN apk add --no-cache nano curl lsof openrc bind-tools
 # create app directory
