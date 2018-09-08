@@ -1,0 +1,33 @@
+# Docker compose file to run offlineweb http and https caching app
+version: '3'
+
+networks:
+  default:
+    external:
+      name: beluga
+
+services:
+  offlineweb:
+    build:
+      context: ./
+      args:
+        - OFFLINEWEB_PORT=${OFFLINEWEB_PORT:-3129}
+        - OFFLINEWEB_TLSPORT=${OFFLINEWEB_TLSPORT:-3130}
+    image: caspia/offlineweb:latest
+    container_name: offlineweb
+    environment:
+      - OFFLINEWEB_PORT=${OFFLINEWEB_PORT}
+      - OFFLINEWEB_TLSPORT=${OFFLINEWEB_TLSPORT}
+      - OFFLINEWEB_WEBTIMEOUT=${OFFLINEWEB_WEBTIMEOUT}
+    ports:
+      - "80:${OFFLINEWEB_PORT}"
+      - "443:${OFFLINEWEB_PORT}"
+    volumes:
+      - $OFFLINEWEB_CERTIFICATEPATH:/root/app/certificates
+      - $OFFLINEWEB_CACHEPATH:/var/cache/offlineweb
+      - $OFFLINEWEB_LOGPATH:/var/log/offlineweb
+    restart: always
+    networks:
+      default:
+        aliases:
+          - offlineweb

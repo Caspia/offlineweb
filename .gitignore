@@ -4,3 +4,4 @@ node_modules/
 test/results
 url.config
 package-lock.json
+.env

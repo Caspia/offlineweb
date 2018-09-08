@@ -23,8 +23,6 @@ process.umask(0);
 // web timeout in milliseconds
 const webtimeout = process.env.OFFLINEWEB_WEBTIMEOUT || 5000;
 
-// number of web browser instances
-const webinstances = process.env.OFFLINEWEB_WEBINSTANCES || 1;
 // path to certificate authority certificate
 
 // There should be a volume pointing to /root/app/certificates but if missing or empty,
@@ -100,7 +98,7 @@ function getContent(responseCachePath, request, response, timeout = 5000) {
   if (!include || dontCache || direct) {
     errorLog.info(`Serving directly: ${siteUrl}`);
     // serve directly
-    utils.fetchWithTimeout(request.siteUrl, {}, webtimeout)
+    utils.fetchWithTimeout(siteUrl, {}, webtimeout)
       .then(fresponse => {
         // for (let pair of fresponse.headers.entries()) {
         //   response.setHeader(pair[0], pair[1]);
@@ -110,14 +108,19 @@ function getContent(responseCachePath, request, response, timeout = 5000) {
           fresponse.body.pipe(response);
         }
         fresponse.body.on('end', () => {
-          errorLog.verbose(`200 response for ${request.siteUrl}: normal fetch for non-cached url`);
+          errorLog.verbose(`200 response for ${siteUrl}: normal fetch for non-cached url`);
           response.end();
         });
       })
       .catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        errorLog.error(`500 response sent, error: ${err.toString()}`);
+        if (response.statusMessage.includes('FETCH_TIMEOUT')) {
+          errorLog.info(`TIMEOUT for ${siteUrl}`)
+        } else {
+          errorLog.error(`500 response sent for ${siteUrl}, error: ${err.toString()}`);
+          errorLog.error(`full error stack for uri ${siteUrl}: ${err.stack}`);
+        }
         response.end(err.toString());
       });
   } else {
@@ -126,8 +129,13 @@ function getContent(responseCachePath, request, response, timeout = 5000) {
       .catch(err => {
         response.statusCode = 500;
         response.statusMessage = err.toString();
-        errorLog.error(`Error from cacheAndResponse for ${siteUrl}: ${err.stack}`);
-        response.end(err.toString());
+        if (err.stack.toString().includes('_TIMEOUT')) {
+          errorLog.info(`TIMEOUT for uri ${siteUrl}`);
+          response.end('TIMEOUT');
+        } else {
+          errorLog.error(`Error from cacheAndResponse for ${siteUrl}: ${err.stack}`);
+          response.end(err.toString());
+        }
       });
   }
 }
