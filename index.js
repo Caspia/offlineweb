@@ -15,6 +15,8 @@ const TraceError = require('./utils').TraceError;
 const logging = require('./logging');
 const utils = require('./utils');
 const readconfig = require('./readconfig');
+const responsecache = require('./responsecache');
+const certificates = require('./certificates');
 
 // We will run as root, but created files will be manipulated by a non-root
 // user. Just let permissions be wide open to reduce headaches.
@@ -46,11 +48,8 @@ const {includes, excludes, nocaches, directs} = fs.existsSync('url.config')
 const {errorLog, accessLog} = logging.setupLogging(logFilesPath);
 errorLog.warn('Restarting offlineweb');
 
-const responsecache = require('./responsecache');
-const certificates = require('./certificates');
-
-const responseCachePath = '/var/cache/offlineweb/responseDir';
-const certificateCachePath = '/var/cache/offlineweb/cacheDir';
+const responseCachePath = '/var/cache/offlineweb/responses';
+const certificateCachePath = '/var/cache/offlineweb/certificates';
 fs.ensureDirSync(responseCachePath, {mode: 0o777});
 fs.ensureDirSync(certificateCachePath, {mode: 0o777});
 
@@ -66,8 +65,9 @@ const tlsport = process.env.OFFLINEWEB_TLSPORT || 3130;
  * @param {Number} timeout web timeout in millisecods
  */
 function getContent(responseCachePath, request, response, timeout = 5000) {
-  accessLog.info(`host: ${request.headers.host} url: ${request.url} method: ${request.method}`);
-  const siteUrl = (new URL(request.url, 'http://' + request.headers.host)).toString();
+  const protocol = request.connection.encrypted ? 'https://' : 'http://';
+  accessLog.info(`host: ${request.headers.host} protocol: ${protocol} url: ${request.url} method: ${request.method}`);
+  const siteUrl = (new URL(request.url, protocol + request.headers.host)).toString();
   errorLog.verbose(`getContent for: ${siteUrl}`);
 
   // url disposition

@@ -4,6 +4,7 @@
 # a remote client
 #
 
+#set -x
 # The address of the offlineweb server
 OFFLINEWEB_IP=172.20.0.100
 # The IP address of the dnsmasq server
@@ -15,5 +16,7 @@ date >> /var/log/rc.local
 iptables -t nat -A PREROUTING -p tcp ! -i docker0 ! -s $OFFLINEWEB_IP --dport 80 -j DNAT --to-destination $OFFLINEWEB_IP:3129
 iptables -t nat -A PREROUTING -p tcp ! -i docker0 ! -s $OFFLINEWEB_IP --dport 443 -j DNAT --to-destination $OFFLINEWEB_IP:3130
 iptables -t nat -A PREROUTING -p tcp ! -i docker0 ! -s $DNS_IP --dport 53 -j DNAT --to-destination $DNS_IP:53
-iptables -t nat -A PREROUTING -p udp ! -i docker0 ! -s $DNS_IP --dport 53 -j DNAT --to-destination $DNS_IP:53]
-iptables -P FORWARD ACCEPT
+iptables -t nat -A PREROUTING -p udp ! -i docker0 ! -s $DNS_IP --dport 53 -j DNAT --to-destination $DNS_IP:53
+# equivalent of adding a default ACCEPT policy, which does not seem to persist.
+iptables -N DOCKER-USER 2>/dev/null
+iptables -I DOCKER-USER -j ACCEPT
