@@ -104,7 +104,7 @@ function getContent(responseCachePath, request, response, timeout = 5000) {
         //   response.setHeader(pair[0], pair[1]);
         // }
         response.setHeader('content-encoding', 'identity');
-        if (direct && (request.method === 'POST' || request.method === 'PUT')) {
+        if (direct && (request.method === 'POST' || request.method === 'PUT' || request.method === 'GET')) {
           fresponse.body.pipe(response);
         }
         fresponse.body.on('end', () => {
@@ -166,11 +166,36 @@ async function cacheAndRespond(siteUrl, responseCachePath, request, response, ti
       response.end('Resource not cached, and we are offline.');
       return;
     }
+    // fetch can't handle multipart content types, but the browser can. This is an issue
+    // with HEAD method. But we con't want the browser to be used with openable types.
+    // So we'll get HEAD directly without caching.
+    if (request.method == 'HEAD') {
+      try {
+        const fresponse = await utils.fetchWithTimeout(siteUrl, {}, webtimeout);
+        response.statusCode = fresponse.status;
+        for (const header of fresponse.headers) {
+          response.setHeader(header[0], header[1]);
+        }
+        response.end();
+        return;
+      } catch(err) {
+        response.statusCode = 500;
+        response.statusMessage = err.toString();
+        if (response.statusMessage.includes('FETCH_TIMEOUT')) {
+          errorLog.info(`TIMEOUT for ${siteUrl}`)
+        } else {
+          errorLog.error(`500 response sent for ${siteUrl}, error: ${err.toString()}`);
+          errorLog.error(`full error stack for uri ${siteUrl}: ${err.stack}`);
+        }
+        response.end(err.toString());
+        return;
+      }
+    }
+
     try {
-      const options = {};
-      options.headers = {
-        'User-Agent': request.headers['user-agent'],
-        'Accept': request.headers['accept']
+      const options = {headers: {}};
+      for (const name in request.headers) {
+        options.headers[name] = request.headers[name];
       };
       await responsecache.saveToResponseCache(siteUrl, responseCachePath, options, timeout);
     } catch (err) {

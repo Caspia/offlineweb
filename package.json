@@ -35,5 +35,8 @@
     "pretty-format": "^23.2.0",
     "sanitize-filename": "^1.6.1",
     "winston": "^3.0.0"
+  },
+  "directories": {
+    "test": "test"
   }
 }
